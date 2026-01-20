@@ -1,7 +1,7 @@
 {
   "name": "isen-ical",
   "version": "1.0.0",
-  "description": "Cloudflare Worker that serves iCal files via Basic Auth",
+  "description": "Cloudflare Worker qui transforme Aurion en iCal",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",

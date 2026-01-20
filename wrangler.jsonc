@@ -6,4 +6,8 @@
     { "binding": "SESSIONS", "id": "982fe9ac3e19435d9d33084f43c73c33" },
     { "binding": "CACHE", "id": "3a98d646ed2446d99a7077c06d1cdd1a" },
   ],
+  "placement": { "mode": "smart" },
+  "observability": {
+    "enabled": true,
+  },
 }
