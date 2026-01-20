@@ -85,15 +85,23 @@ export class ICalService {
       location ||
       additionalInfo ||
       "Événement sans titre";
-    const descriptionParts = [courseType, professor, additionalInfo].filter(
-      Boolean,
-    );
+
+    const descriptionLines: string[] = [];
+    if (additionalInfo) {
+      descriptionLines.push(additionalInfo, "");
+    }
+    if (professor) {
+      descriptionLines.push(`Professeur: ${professor}`);
+    }
+    if (courseType) {
+      descriptionLines.push(`Type de cours: ${courseType}`);
+    }
 
     return {
       summary,
       location: location || undefined,
       description:
-        descriptionParts.length > 0 ? descriptionParts.join(" - ") : undefined,
+        descriptionLines.length > 0 ? descriptionLines.join("\n") : undefined,
     };
   }
 
