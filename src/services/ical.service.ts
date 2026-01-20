@@ -4,6 +4,7 @@ export interface ICalEvent {
   uid: string;
   summary: string;
   description?: string;
+  location?: string;
   dtstart: Date;
   dtend: Date;
 }
@@ -30,6 +31,10 @@ export class ICalService {
       `DTEND:${this.formatDate(event.dtend)}`,
       `SUMMARY:${this.escapeText(event.summary)}`,
     ];
+
+    if (event.location) {
+      lines.push(`LOCATION:${this.escapeText(event.location)}`);
+    }
 
     if (event.description) {
       lines.push(`DESCRIPTION:${this.escapeText(event.description)}`);
@@ -59,13 +64,51 @@ export class ICalService {
     return lines.join('\r\n');
   }
 
+  /**
+   * Aurion title format: "Location\nAdditionalInfo\nSubject\nCourseType\nProfessor"
+   */
+  private parseAurionTitle(title: string): {
+    summary: string;
+    location?: string;
+    description?: string;
+  } {
+    const parts = title.split('\n').map((p) => p.trim()).filter(Boolean);
+
+    if (parts.length >= 5) {
+      const [location, additionalInfo, subject, courseType, professor] = parts;
+      return {
+        summary: subject,
+        location,
+        description: [courseType, professor, additionalInfo].filter(Boolean).join(' - '),
+      };
+    }
+
+    if (parts.length >= 3) {
+      return {
+        summary: parts[2] || parts[0],
+        location: parts[0],
+        description: parts.slice(3).join(' - '),
+      };
+    }
+
+    return {
+      summary: parts[0] || title,
+      location: parts[1],
+    };
+  }
+
   fromAurionEvents(aurionEvents: AurionEvent[], username: string): string {
-    const icalEvents: ICalEvent[] = aurionEvents.map((event) => ({
-      uid: `${event.id}@isen-ical`,
-      summary: event.title,
-      dtstart: new Date(event.start),
-      dtend: new Date(event.end),
-    }));
+    const icalEvents: ICalEvent[] = aurionEvents.map((event) => {
+      const parsed = this.parseAurionTitle(event.title);
+      return {
+        uid: `${event.id}@isen-ical`,
+        summary: parsed.summary,
+        location: parsed.location,
+        description: parsed.description,
+        dtstart: new Date(event.start),
+        dtend: new Date(event.end),
+      };
+    });
 
     return this.generate(icalEvents, `${username}'s ISEN Calendar`);
   }
