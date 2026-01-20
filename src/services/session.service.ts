@@ -1,4 +1,5 @@
 const AURION_BASE_URL = 'https://aurion.junia.com';
+const SESSION_TTL_SECONDS = 3600;
 
 function getSetCookieHeaders(headers: Headers): string[] {
   const cookies: string[] = [];
@@ -19,6 +20,33 @@ const DEFAULT_HEADERS: Record<string, string> = {
 
 export class SessionService {
   private cookies: Map<string, string> = new Map();
+  private sessionsKV: KVNamespace | null = null;
+  private userKey: string | null = null;
+
+  setKV(kv: KVNamespace, userKey: string): void {
+    this.sessionsKV = kv;
+    this.userKey = userKey;
+  }
+
+  async loadFromKV(): Promise<boolean> {
+    if (!this.sessionsKV || !this.userKey) return false;
+
+    const stored = await this.sessionsKV.get(this.userKey);
+    if (!stored) return false;
+
+    const cookieMap = JSON.parse(stored) as Record<string, string>;
+    this.cookies = new Map(Object.entries(cookieMap));
+    return this.cookies.size > 0;
+  }
+
+  private async saveToKV(): Promise<void> {
+    if (!this.sessionsKV || !this.userKey) return;
+
+    const cookieObj = Object.fromEntries(this.cookies);
+    await this.sessionsKV.put(this.userKey, JSON.stringify(cookieObj), {
+      expirationTtl: SESSION_TTL_SECONDS,
+    });
+  }
 
   private parseCookies(setCookieHeaders: string[]): void {
     for (const header of setCookieHeaders) {
@@ -121,6 +149,8 @@ export class SessionService {
     if (this.cookies.size === 0) {
       throw new Error('No session cookie received');
     }
+
+    await this.saveToKV();
   }
 
   hasCookies(): boolean {

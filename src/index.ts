@@ -2,10 +2,15 @@ import { AuthService } from './services/auth.service';
 import { AurionService } from './services/aurion.service';
 import { ICalService } from './services/ical.service';
 
+export interface Env {
+  SESSIONS: KVNamespace;
+  CACHE: KVNamespace;
+}
+
 const icalService = new ICalService();
 
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const authHeader = request.headers.get('Authorization');
 
     const parseResult = AuthService.parseAuthorizationHeader(authHeader);
@@ -31,7 +36,7 @@ export default {
     const { username, password } = parseResult.credentials;
 
     try {
-      const aurionService = new AurionService();
+      const aurionService = new AurionService(env);
       const events = await aurionService.getPlanning(username, password);
       const ical = icalService.fromAurionEvents(events, username);
 

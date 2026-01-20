@@ -3,6 +3,9 @@ import {
   type AurionEvent,
 } from './page-parser.service';
 import { SessionService } from './session.service';
+import type { Env } from '../index';
+
+const CACHE_TTL_SECONDS = 3600;
 
 export class AurionService {
   private session: SessionService;
@@ -10,9 +13,25 @@ export class AurionService {
   private menuId = '';
   private idInit = '';
   private formIdPlanning = '';
+  private env: Env;
 
-  constructor() {
+  constructor(env: Env) {
     this.session = new SessionService();
+    this.env = env;
+  }
+
+  private getUserKey(email: string, password: string): string {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${email}:${password}`);
+    let hash = 0;
+    for (const byte of data) {
+      hash = ((hash << 5) - hash + byte) | 0;
+    }
+    return `user:${email}:${hash.toString(16)}`;
+  }
+
+  private getCacheKey(userKey: string, start: number, end: number): string {
+    return `events:${userKey}:${start}:${end}`;
   }
 
   async login(email: string, password: string): Promise<void> {
@@ -118,11 +137,46 @@ export class AurionService {
     const start = startTimestamp ?? Date.now() - 7 * 24 * 60 * 60 * 1000;
     const end = endTimestamp ?? start + 60 * 24 * 60 * 60 * 1000;
 
-    await this.login(email, password);
-    await this.initializeSession();
-    await this.navigateToPlanning();
+    const userKey = this.getUserKey(email, password);
+    const cacheKey = this.getCacheKey(userKey, start, end);
 
-    return this.fetchPlanningData(start, end);
+    const cachedEvents = await this.env.CACHE.get(cacheKey);
+    if (cachedEvents) {
+      return JSON.parse(cachedEvents) as AurionEvent[];
+    }
+
+    this.session.setKV(this.env.SESSIONS, userKey);
+    const hasSession = await this.session.loadFromKV();
+
+    if (!hasSession) {
+      await this.login(email, password);
+    }
+
+    try {
+      await this.initializeSession();
+      await this.navigateToPlanning();
+      const events = await this.fetchPlanningData(start, end);
+
+      await this.env.CACHE.put(cacheKey, JSON.stringify(events), {
+        expirationTtl: CACHE_TTL_SECONDS,
+      });
+
+      return events;
+    } catch (error) {
+      if (hasSession) {
+        await this.login(email, password);
+        await this.initializeSession();
+        await this.navigateToPlanning();
+        const events = await this.fetchPlanningData(start, end);
+
+        await this.env.CACHE.put(cacheKey, JSON.stringify(events), {
+          expirationTtl: CACHE_TTL_SECONDS,
+        });
+
+        return events;
+      }
+      throw error;
+    }
   }
 }
 
