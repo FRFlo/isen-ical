@@ -124,8 +124,16 @@ export class ICalService {
   }
 
   private parseAurionDate(dateValue: string | number): Date {
-    const timestamp = typeof dateValue === "string" ? parseInt(dateValue, 10) : dateValue;
-    return new Date(timestamp);
+    if (typeof dateValue === "number") {
+      return new Date(dateValue);
+    }
+
+    const asNumber = Number(dateValue);
+    if (!isNaN(asNumber) && dateValue.match(/^\d+$/)) {
+      return new Date(asNumber);
+    }
+
+    return new Date(dateValue);
   }
 
   fromAurionEvents(aurionEvents: AurionEvent[], username: string): string {
