@@ -10,11 +10,28 @@ export interface ICalEvent {
 }
 
 export class ICalService {
-  private formatDate(date: Date): string {
-    return date
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d{3}/, "");
+  private formatDateUTC(date: Date): string {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const year = date.getUTCFullYear();
+    const month = pad(date.getUTCMonth() + 1);
+    const day = pad(date.getUTCDate());
+    const hours = pad(date.getUTCHours());
+    const minutes = pad(date.getUTCMinutes());
+    const seconds = pad(date.getUTCSeconds());
+    return `${year}${month}${day}T${hours}${minutes}${seconds}Z`;
+  }
+
+  private foldLine(line: string): string {
+    if (line.length <= 75) return line;
+
+    const chunks: string[] = [];
+    chunks.push(line.slice(0, 75));
+    let pos = 75;
+    while (pos < line.length) {
+      chunks.push(" " + line.slice(pos, pos + 74));
+      pos += 74;
+    }
+    return chunks.join("\r\n");
   }
 
   private escapeText(text: string): string {
@@ -29,9 +46,9 @@ export class ICalService {
     const lines = [
       "BEGIN:VEVENT",
       `UID:${event.uid}`,
-      `DTSTAMP:${this.formatDate(new Date())}`,
-      `DTSTART:${this.formatDate(event.dtstart)}`,
-      `DTEND:${this.formatDate(event.dtend)}`,
+      `DTSTAMP:${this.formatDateUTC(new Date())}`,
+      `DTSTART:${this.formatDateUTC(event.dtstart)}`,
+      `DTEND:${this.formatDateUTC(event.dtend)}`,
       `SUMMARY:${this.escapeText(event.summary)}`,
     ];
 
@@ -45,7 +62,7 @@ export class ICalService {
 
     lines.push("END:VEVENT");
 
-    return lines.join("\r\n");
+    return lines.map((line) => this.foldLine(line)).join("\r\n");
   }
 
   generate(events: ICalEvent[], calendarName = "ISEN Calendar"): string {
@@ -56,6 +73,7 @@ export class ICalService {
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       `X-WR-CALNAME:${this.escapeText(calendarName)}`,
+      "X-WR-TIMEZONE:Europe/Paris",
     ];
 
     for (const event of events) {
@@ -64,7 +82,7 @@ export class ICalService {
 
     lines.push("END:VCALENDAR");
 
-    return lines.join("\r\n");
+    return lines.map((line) => this.foldLine(line)).join("\r\n");
   }
 
   /**
@@ -105,6 +123,11 @@ export class ICalService {
     };
   }
 
+  private parseAurionDate(dateValue: string | number): Date {
+    const timestamp = typeof dateValue === "string" ? parseInt(dateValue, 10) : dateValue;
+    return new Date(timestamp);
+  }
+
   fromAurionEvents(aurionEvents: AurionEvent[], username: string): string {
     const icalEvents: ICalEvent[] = aurionEvents.map((event) => {
       const parsed = this.parseAurionTitle(event.title);
@@ -113,8 +136,8 @@ export class ICalService {
         summary: parsed.summary,
         location: parsed.location,
         description: parsed.description,
-        dtstart: new Date(event.start),
-        dtend: new Date(event.end),
+        dtstart: this.parseAurionDate(event.start),
+        dtend: this.parseAurionDate(event.end),
       };
     });
 
