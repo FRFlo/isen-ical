@@ -1,4 +1,4 @@
-import type { AurionEvent } from './aurion.service';
+import type { AurionEvent } from "./aurion.service";
 
 export interface ICalEvent {
   uid: string;
@@ -11,20 +11,23 @@ export interface ICalEvent {
 
 export class ICalService {
   private formatDate(date: Date): string {
-    return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    return date
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}/, "");
   }
 
   private escapeText(text: string): string {
     return text
-      .replace(/\\/g, '\\\\')
-      .replace(/,/g, '\\,')
-      .replace(/;/g, '\\;')
-      .replace(/\n/g, '\\n');
+      .replace(/\\/g, "\\\\")
+      .replace(/,/g, "\\,")
+      .replace(/;/g, "\\;")
+      .replace(/\n/g, "\\n");
   }
 
   generateEvent(event: ICalEvent): string {
     const lines = [
-      'BEGIN:VEVENT',
+      "BEGIN:VEVENT",
       `UID:${event.uid}`,
       `DTSTAMP:${this.formatDate(new Date())}`,
       `DTSTART:${this.formatDate(event.dtstart)}`,
@@ -40,18 +43,18 @@ export class ICalService {
       lines.push(`DESCRIPTION:${this.escapeText(event.description)}`);
     }
 
-    lines.push('END:VEVENT');
+    lines.push("END:VEVENT");
 
-    return lines.join('\r\n');
+    return lines.join("\r\n");
   }
 
-  generate(events: ICalEvent[], calendarName = 'ISEN Calendar'): string {
+  generate(events: ICalEvent[], calendarName = "ISEN Calendar"): string {
     const lines = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//ISEN-ICAL//isen-ical//EN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//ISEN-ICAL//isen-ical//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
       `X-WR-CALNAME:${this.escapeText(calendarName)}`,
     ];
 
@@ -59,41 +62,38 @@ export class ICalService {
       lines.push(this.generateEvent(event));
     }
 
-    lines.push('END:VCALENDAR');
+    lines.push("END:VCALENDAR");
 
-    return lines.join('\r\n');
+    return lines.join("\r\n");
   }
 
   /**
    * Aurion title format: "Location\nAdditionalInfo\nSubject\nCourseType\nProfessor"
+   * All fields are optional and may be empty.
    */
   private parseAurionTitle(title: string): {
     summary: string;
     location?: string;
     description?: string;
   } {
-    const parts = title.split('\n').map((p) => p.trim()).filter(Boolean);
+    const rawParts = title.split("\n").map((p) => p.trim());
+    const [location, additionalInfo, subject, courseType, professor] = rawParts;
 
-    if (parts.length >= 5) {
-      const [location, additionalInfo, subject, courseType, professor] = parts;
-      return {
-        summary: subject,
-        location,
-        description: [courseType, professor, additionalInfo].filter(Boolean).join(' - '),
-      };
-    }
-
-    if (parts.length >= 3) {
-      return {
-        summary: parts[2] || parts[0],
-        location: parts[0],
-        description: parts.slice(3).join(' - '),
-      };
-    }
+    const summary =
+      subject ||
+      courseType ||
+      location ||
+      additionalInfo ||
+      "Événement sans titre";
+    const descriptionParts = [courseType, professor, additionalInfo].filter(
+      Boolean,
+    );
 
     return {
-      summary: parts[0] || title,
-      location: parts[1],
+      summary,
+      location: location || undefined,
+      description:
+        descriptionParts.length > 0 ? descriptionParts.join(" - ") : undefined,
     };
   }
 
@@ -119,7 +119,7 @@ export class ICalService {
 
     const placeholderEvent: ICalEvent = {
       uid: `placeholder-${username}@isen-ical`,
-      summary: 'Sample Event',
+      summary: "Sample Event",
       description: `This is a placeholder event for ${username}`,
       dtstart: now,
       dtend: oneHourLater,
