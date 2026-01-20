@@ -65,14 +65,14 @@ export class ICalService {
     return lines.map((line) => this.foldLine(line)).join("\r\n");
   }
 
-  generate(events: ICalEvent[], calendarName = "ISEN Calendar"): string {
+  generate(events: ICalEvent[]): string {
     const lines = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
       "PRODID:-//ISEN-ICAL//isen-ical//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
-      `X-WR-CALNAME:${this.escapeText(calendarName)}`,
+      `X-WR-CALNAME:"Calendrier JUNIA"`,
       "X-WR-TIMEZONE:Europe/Paris",
     ];
 
@@ -149,7 +149,7 @@ export class ICalService {
       };
     });
 
-    return this.generate(icalEvents, `${username}'s ISEN Calendar`);
+    return this.generate(icalEvents);
   }
 
   generatePlaceholder(username: string): string {
@@ -164,6 +164,6 @@ export class ICalService {
       dtend: oneHourLater,
     };
 
-    return this.generate([placeholderEvent], `${username}'s Calendar`);
+    return this.generate([placeholderEvent]);
   }
 }
