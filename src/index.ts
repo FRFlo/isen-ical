@@ -1,7 +1,7 @@
 import { AuthService } from './services/auth.service';
+import { AurionService } from './services/aurion.service';
 import { ICalService } from './services/ical.service';
 
-const authService = new AuthService();
 const icalService = new ICalService();
 
 export default {
@@ -29,22 +29,35 @@ export default {
     }
 
     const { username, password } = parseResult.credentials;
-    const validationResult = await authService.validate(username, password);
 
-    if (!validationResult.success) {
-      return new Response('Invalid credentials', {
-        status: 403,
+    try {
+      const aurionService = new AurionService();
+      const events = await aurionService.getPlanning(username, password);
+      const ical = icalService.fromAurionEvents(events, username);
+
+      return new Response(ical, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/calendar; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${username}-calendar.ics"`,
+        },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown error';
+
+      if (
+        message.includes('Login failed') ||
+        message.includes('No session cookie')
+      ) {
+        return new Response('Invalid credentials', {
+          status: 403,
+        });
+      }
+
+      return new Response(`Error fetching schedule: ${message}`, {
+        status: 500,
       });
     }
-
-    const ical = icalService.generatePlaceholder(username);
-
-    return new Response(ical, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/calendar; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${username}-calendar.ics"`,
-      },
-    });
   },
 };

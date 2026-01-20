@@ -1,3 +1,5 @@
+import type { AurionEvent } from './aurion.service';
+
 export interface ICalEvent {
   uid: string;
   summary: string;
@@ -55,6 +57,17 @@ export class ICalService {
     lines.push('END:VCALENDAR');
 
     return lines.join('\r\n');
+  }
+
+  fromAurionEvents(aurionEvents: AurionEvent[], username: string): string {
+    const icalEvents: ICalEvent[] = aurionEvents.map((event) => ({
+      uid: `${event.id}@isen-ical`,
+      summary: event.title,
+      dtstart: new Date(event.start),
+      dtend: new Date(event.end),
+    }));
+
+    return this.generate(icalEvents, `${username}'s ISEN Calendar`);
   }
 
   generatePlaceholder(username: string): string {
