@@ -22,16 +22,33 @@ export class ICalService {
   }
 
   private foldLine(line: string): string {
-    if (line.length <= 75) return line;
+    const maxLength = 75;
+    const continuationLength = 74;
+
+    const getByteLength = (str: string): number => {
+      return new TextEncoder().encode(str).length;
+    };
+
+    const byteLength = getByteLength(line);
+    if (byteLength <= maxLength) return line;
 
     const chunks: string[] = [];
-    chunks.push(line.slice(0, 75));
-    let pos = 75;
-    while (pos < line.length) {
-      chunks.push(" " + line.slice(pos, pos + 74));
-      pos += 74;
+    let currentPos = 0;
+    const lineBytes = new TextEncoder().encode(line);
+
+    while (currentPos < lineBytes.length) {
+      const remainingBytes = lineBytes.length - currentPos;
+      const chunkLength = currentPos === 0 ? maxLength : continuationLength;
+      const actualChunkLength = Math.min(chunkLength, remainingBytes);
+
+      const chunkBytes = lineBytes.slice(currentPos, currentPos + actualChunkLength);
+      const chunk = new TextDecoder().decode(chunkBytes);
+      chunks.push(chunk);
+
+      currentPos += actualChunkLength;
     }
-    return chunks.join("\r\n");
+
+    return chunks.join("\r\n ");
   }
 
   private escapeText(text: string): string {
@@ -42,7 +59,7 @@ export class ICalService {
       .replace(/\n/g, "\\n");
   }
 
-  generateEvent(event: ICalEvent): string {
+  generateEvent(event: ICalEvent): string[] {
     const lines = [
       "BEGIN:VEVENT",
       `UID:${event.uid}`,
@@ -62,11 +79,11 @@ export class ICalService {
 
     lines.push("END:VEVENT");
 
-    return lines.map((line) => this.foldLine(line)).join("\r\n");
+    return lines;
   }
 
   generate(events: ICalEvent[]): string {
-    const lines = [
+    const allLines: string[] = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
       "PRODID:-//ISEN-ICAL//isen-ical//EN",
@@ -77,12 +94,20 @@ export class ICalService {
     ];
 
     for (const event of events) {
-      lines.push(this.generateEvent(event));
+      const eventLines = this.generateEvent(event);
+      allLines.push(...eventLines);
     }
 
-    lines.push("END:VCALENDAR");
+    allLines.push("END:VCALENDAR");
 
-    return lines.map((line) => this.foldLine(line)).join("\r\n");
+    const resultLines: string[] = [];
+    for (const line of allLines) {
+      const folded = this.foldLine(line);
+      const foldedParts = folded.split("\r\n");
+      resultLines.push(...foldedParts);
+    }
+
+    return resultLines.join("\r\n");
   }
 
   /**
