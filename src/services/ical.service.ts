@@ -72,7 +72,7 @@ export class ICalService {
       "PRODID:-//ISEN-ICAL//isen-ical//EN",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
-      `X-WR-CALNAME:"Calendrier JUNIA"`,
+      `X-WR-CALNAME:Calendrier JUNIA`,
       "X-WR-TIMEZONE:Europe/Paris",
     ];
 
