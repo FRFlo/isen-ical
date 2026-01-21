@@ -12,7 +12,7 @@ const icalService = new ICalService();
 function generateHomepage(baseUrl: string): string {
   const url = new URL(baseUrl);
   const webcalUrl = `webcal://${url.host}/`;
-  
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -50,8 +50,63 @@ function generateHomepage(baseUrl: string): string {
     }
     .subtitle {
       color: #666;
-      margin-bottom: 40px;
+      margin-bottom: 30px;
       font-size: 16px;
+    }
+    .section-title {
+      color: #333;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .section-icon {
+      width: 20px;
+      height: 20px;
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 28px 0;
+    }
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: #ddd;
+    }
+    .divider-text {
+      padding: 0 16px;
+      color: #999;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus {
+      border-color: #e85c30;
+      outline: none;
     }
     .btn {
       width: 100%;
@@ -78,9 +133,12 @@ function generateHomepage(baseUrl: string): string {
   <div class="container">
     <h1>📅 Calendrier JUNIA</h1>
     <p class="subtitle">Ajoutez votre calendrier à votre application préférée</p>
-    
-    <a href="${webcalUrl}" class="btn">Ajouter à mon calendrier</a>
-  </div>
+
+    <div class="section-title">
+      <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/apple.svg" alt="Apple" class="section-icon">
+      <span>iOS / macOS</span>
+    </div>
+    <a href="${webcalUrl}" id="webcal-btn" class="btn">Ajouter à mon calendrier</a>
 </body>
 </html>`;
 }
