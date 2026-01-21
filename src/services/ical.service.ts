@@ -122,12 +122,16 @@ export class ICalService {
     const rawParts = title.split("\n").map((p) => p.trim());
     const [location, additionalInfo, subject, courseType, professor] = rawParts;
 
-    const summary =
+    let summary =
       subject ||
       courseType ||
       location ||
       additionalInfo ||
       "Événement sans titre";
+
+    if (courseType === "EXAM_SURV") {
+      summary = `🎓 ${summary}`;
+    }
 
     const descriptionLines: string[] = [];
     if (additionalInfo) {
