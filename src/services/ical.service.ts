@@ -59,6 +59,10 @@ export class ICalService {
       .replace(/\n/g, "\\n");
   }
 
+  private normalizeSpaces(text: string): string {
+    return text.replace(/\s+/g, " ").trim();
+  }
+
   generateEvent(event: ICalEvent): string[] {
     const lines = [
       "BEGIN:VEVENT",
@@ -133,6 +137,8 @@ export class ICalService {
       summary = `🎓 ${summary}`;
     }
 
+    summary = this.normalizeSpaces(summary);
+
     const descriptionLines: string[] = [];
     if (additionalInfo) {
       descriptionLines.push(additionalInfo, "");
@@ -146,7 +152,7 @@ export class ICalService {
 
     return {
       summary,
-      location: location || undefined,
+      location: location ? this.normalizeSpaces(location) : undefined,
       description:
         descriptionLines.length > 0 ? descriptionLines.join("\n") : undefined,
     };
