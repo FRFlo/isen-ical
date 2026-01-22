@@ -146,9 +146,12 @@ src/
 │   ├── auth.service.ts             # Parsing de l'authentification Basic Auth
 │   ├── aurion.service.ts           # Scraper Aurion (login + récupération planning)
 │   ├── ical.service.ts             # Génération iCal avec parsing intelligent
+│   ├── template.service.ts         # Gestion et rendu des templates HTML
 │   ├── token.service.ts            # Gestion des tokens et chiffrement
 │   ├── page-parser.service.ts      # Utilitaires de parsing HTML
 │   └── session.service.ts          # Gestion des cookies et sessions HTTP
+├── templates/
+│   └── homepage.template.ts        # Template HTML de la page d'accueil
 └── types/
     ├── auth.types.ts               # Types pour l'authentification
     └── token.types.ts              # Types pour les tokens
