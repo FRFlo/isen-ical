@@ -214,9 +214,11 @@ function generateHomepage(baseUrl: string): string {
     <div id="success-section" class="success hidden">
       <strong>URL générée avec succès !</strong>
       <div class="url-display" id="calendar-url"></div>
+      <a id="google-calendar-link" href="#" target="_blank" class="btn btn-secondary" style="display: none;">Ajouter à Google Calendar</a>
       <button type="button" id="copy-btn" class="btn btn-secondary">Copier l'URL</button>
       <div class="instructions">
         <strong>Instructions pour Google Calendar :</strong><br>
+        Cliquez sur le bouton "Ajouter à Google Calendar" ci-dessus, ou suivez ces étapes manuelles :<br>
         1. Copiez l'URL ci-dessus<br>
         2. Ouvrez Google Calendar<br>
         3. Cliquez sur le "+" à côté de "Autres calendriers"<br>
@@ -233,6 +235,7 @@ function generateHomepage(baseUrl: string): string {
     const calendarUrl = document.getElementById('calendar-url');
     const copyBtn = document.getElementById('copy-btn');
     const generateBtn = document.getElementById('generate-btn');
+    const googleCalendarLink = document.getElementById('google-calendar-link');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -261,6 +264,9 @@ function generateHomepage(baseUrl: string): string {
         }
 
         calendarUrl.textContent = data.url;
+        const encodedUrl = encodeURIComponent(data.url);
+        googleCalendarLink.href = \`https://calendar.google.com/calendar/render?cid=\${encodedUrl}\`;
+        googleCalendarLink.style.display = 'inline-block';
         successSection.classList.remove('hidden');
       } catch (error) {
         errorMessage.textContent = error.message || 'Une erreur est survenue';
