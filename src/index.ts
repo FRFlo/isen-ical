@@ -1,10 +1,12 @@
 import { AuthService } from './services/auth.service';
 import { AurionService } from './services/aurion.service';
 import { ICalService } from './services/ical.service';
+import { TokenService } from './services/token.service';
 
 export interface Env {
   SESSIONS: KVNamespace;
   CACHE: KVNamespace;
+  TOKENS: KVNamespace;
 }
 
 const icalService = new ICalService();
@@ -127,6 +129,51 @@ function generateHomepage(baseUrl: string): string {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(232, 92, 48, 0.4);
     }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .error {
+      color: #d32f2f;
+      font-size: 14px;
+      margin-top: 8px;
+      text-align: left;
+    }
+    .success {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 20px;
+      text-align: left;
+    }
+    .url-display {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      word-break: break-all;
+      font-family: monospace;
+      margin: 12px 0;
+      color: #333;
+    }
+    .btn-secondary {
+      background: #4285f4;
+      margin-top: 8px;
+    }
+    .btn-secondary:hover {
+      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+    }
+    .instructions {
+      font-size: 13px;
+      color: #666;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -139,14 +186,229 @@ function generateHomepage(baseUrl: string): string {
       <span>iOS / macOS</span>
     </div>
     <a href="${webcalUrl}" id="webcal-btn" class="btn">Ajouter à mon calendrier</a>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-text">OU</div>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="section-title">
+      <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/google.svg" alt="Google" class="section-icon">
+      <span>Google Calendar</span>
+    </div>
+
+    <form id="token-form">
+      <div class="form-group">
+        <label class="form-label" for="email">Email Aurion</label>
+        <input type="email" id="email" class="form-input" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Mot de passe</label>
+        <input type="password" id="password" class="form-input" required autocomplete="current-password">
+      </div>
+      <div id="error-message" class="error hidden"></div>
+      <button type="submit" id="generate-btn" class="btn">Générer l'URL d'abonnement</button>
+    </form>
+
+    <div id="success-section" class="success hidden">
+      <strong>URL générée avec succès !</strong>
+      <div class="url-display" id="calendar-url"></div>
+      <button type="button" id="copy-btn" class="btn btn-secondary">Copier l'URL</button>
+      <div class="instructions">
+        <strong>Instructions pour Google Calendar :</strong><br>
+        1. Copiez l'URL ci-dessus<br>
+        2. Ouvrez Google Calendar<br>
+        3. Cliquez sur le "+" à côté de "Autres calendriers"<br>
+        4. Sélectionnez "À partir de l'URL"<br>
+        5. Collez l'URL et cliquez sur "Ajouter le calendrier"
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('token-form');
+    const errorMessage = document.getElementById('error-message');
+    const successSection = document.getElementById('success-section');
+    const calendarUrl = document.getElementById('calendar-url');
+    const copyBtn = document.getElementById('copy-btn');
+    const generateBtn = document.getElementById('generate-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      errorMessage.classList.add('hidden');
+      successSection.classList.add('hidden');
+      generateBtn.disabled = true;
+      generateBtn.textContent = 'Génération en cours...';
+
+      try {
+        const response = await fetch('/api/generate-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username: email, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de la génération');
+        }
+
+        calendarUrl.textContent = data.url;
+        successSection.classList.remove('hidden');
+      } catch (error) {
+        errorMessage.textContent = error.message || 'Une erreur est survenue';
+        errorMessage.classList.remove('hidden');
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Générer l\\'URL d\\'abonnement';
+      }
+    });
+
+    copyBtn.addEventListener('click', () => {
+      const url = calendarUrl.textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        copyBtn.textContent = 'Copié !';
+        setTimeout(() => {
+          copyBtn.textContent = 'Copier l\\'URL';
+        }, 2000);
+      });
+    });
+  </script>
 </body>
 </html>`;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const acceptHeader = request.headers.get('Accept') || '';
     const url = new URL(request.url);
+    const pathname = url.pathname;
+    const method = request.method;
+
+    if (method === 'POST' && pathname === '/api/generate-token') {
+      try {
+        const body = await request.json() as { username: string; password: string };
+        
+        if (!body.username || !body.password) {
+          return new Response(
+            JSON.stringify({ error: 'Username and password are required' }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+
+        const aurionService = new AurionService(env);
+        await aurionService.getPlanning(body.username, body.password, Date.now(), Date.now() + 86400000);
+
+        const token = TokenService.generateToken();
+        const encryptionKey = TokenService.generateEncryptionKey();
+        
+        await TokenService.storeToken(
+          env.TOKENS,
+          token,
+          { username: body.username, password: body.password },
+          encryptionKey
+        );
+
+        const calendarUrl = `${url.origin}/calendar/${token}?key=${encodeURIComponent(encryptionKey)}`;
+
+        return new Response(
+          JSON.stringify({ token, encryptionKey, url: calendarUrl }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+
+        if (
+          message.includes('Login failed') ||
+          message.includes('No session cookie')
+        ) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid credentials' }),
+            {
+              status: 403,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ error: `Error: ${message}` }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+
+    if (method === 'GET' && pathname.startsWith('/calendar/')) {
+      const token = pathname.split('/calendar/')[1];
+      const encryptionKey = url.searchParams.get('key');
+
+      if (!token || !encryptionKey) {
+        return new Response('Token and encryption key are required', {
+          status: 400,
+        });
+      }
+
+      try {
+        const credentials = await TokenService.getCredentials(
+          env.TOKENS,
+          token,
+          encryptionKey
+        );
+
+        if (!credentials) {
+          return new Response('Invalid token', {
+            status: 404,
+          });
+        }
+
+        const aurionService = new AurionService(env);
+        const events = await aurionService.getPlanning(
+          credentials.username,
+          credentials.password
+        );
+        const ical = icalService.fromAurionEvents(events);
+
+        return new Response(ical, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/calendar; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="isen-ical.ics"',
+          },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+
+        if (
+          message.includes('Login failed') ||
+          message.includes('No session cookie')
+        ) {
+          return new Response('Invalid credentials', {
+            status: 403,
+          });
+        }
+
+        return new Response(`Error fetching schedule: ${message}`, {
+          status: 500,
+        });
+      }
+    }
+
+    const acceptHeader = request.headers.get('Accept') || '';
     const baseUrl = url.origin;
     
     if (acceptHeader.includes('text/html')) {
