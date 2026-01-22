@@ -12,3 +12,10 @@ export interface TokenGenerationResult {
   encryptionKey: string;
   url: string;
 }
+
+export interface UserTokenEntry {
+  token: string;
+  createdAt: number;
+}
+
+export type UserTokenList = UserTokenEntry[];

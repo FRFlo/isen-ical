@@ -1,6 +1,6 @@
 import type { KVNamespace } from '@cloudflare/workers-types';
 import type { AuthCredentials } from '../types/auth.types';
-import type { StoredToken, TokenGenerationResult } from '../types/token.types';
+import type { StoredToken, TokenGenerationResult, UserTokenList } from '../types/token.types';
 
 export class TokenService {
   static generateToken(): string {
@@ -80,12 +80,79 @@ export class TokenService {
     return JSON.parse(decoded) as AuthCredentials;
   }
 
+  static async getUserTokens(
+    kv: KVNamespace,
+    email: string
+  ): Promise<UserTokenList> {
+    const userTokensKey = `user:${email}:tokens`;
+    const stored = await kv.get(userTokensKey);
+    if (!stored) {
+      return [];
+    }
+    try {
+      return JSON.parse(stored) as UserTokenList;
+    } catch {
+      return [];
+    }
+  }
+
+  static async addTokenToUser(
+    kv: KVNamespace,
+    email: string,
+    token: string,
+    createdAt: number
+  ): Promise<void> {
+    const userTokensKey = `user:${email}:tokens`;
+    const tokens = await this.getUserTokens(kv, email);
+    tokens.push({ token, createdAt });
+    await kv.put(userTokensKey, JSON.stringify(tokens));
+  }
+
+  static async removeTokenFromUser(
+    kv: KVNamespace,
+    email: string,
+    tokenToRemove: string
+  ): Promise<void> {
+    const userTokensKey = `user:${email}:tokens`;
+    const tokens = await this.getUserTokens(kv, email);
+    const filtered = tokens.filter((t) => t.token !== tokenToRemove);
+    await kv.put(userTokensKey, JSON.stringify(filtered));
+  }
+
+  static async enforceTokenLimit(
+    kv: KVNamespace,
+    email: string,
+    maxTokens: number
+  ): Promise<void> {
+    const tokens = await this.getUserTokens(kv, email);
+    
+    if (tokens.length < maxTokens) {
+      return;
+    }
+
+    const sorted = [...tokens].sort((a, b) => a.createdAt - b.createdAt);
+    const toRemove = sorted.slice(0, tokens.length - maxTokens + 1);
+    const tokensToKeep = sorted.slice(tokens.length - maxTokens + 1);
+
+    for (const entry of toRemove) {
+      await kv.delete(`token:${entry.token}`);
+    }
+
+    const userTokensKey = `user:${email}:tokens`;
+    await kv.put(userTokensKey, JSON.stringify(tokensToKeep));
+  }
+
   static async storeToken(
     kv: KVNamespace,
     token: string,
     credentials: AuthCredentials,
-    encryptionKey: string
+    encryptionKey: string,
+    maxTokensPerUser: number = 3
   ): Promise<void> {
+    const createdAt = Date.now();
+    
+    await this.enforceTokenLimit(kv, credentials.username, maxTokensPerUser);
+
     const { encrypted, iv } = await this.encryptCredentials(
       credentials,
       encryptionKey
@@ -94,11 +161,12 @@ export class TokenService {
     const stored: StoredToken = {
       encrypted,
       iv,
-      createdAt: Date.now(),
+      createdAt,
       email: credentials.username,
     };
 
     await kv.put(`token:${token}`, JSON.stringify(stored));
+    await this.addTokenToUser(kv, credentials.username, token, createdAt);
   }
 
   static async getCredentials(

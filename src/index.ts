@@ -7,6 +7,7 @@ export interface Env {
   SESSIONS: KVNamespace;
   CACHE: KVNamespace;
   TOKENS: KVNamespace;
+  MAX_TOKENS_PER_USER?: number;
 }
 
 const icalService = new ICalService();
@@ -317,11 +318,13 @@ export default {
         const token = TokenService.generateToken();
         const encryptionKey = TokenService.generateEncryptionKey();
         
+        const maxTokensPerUser = env.MAX_TOKENS_PER_USER ?? 3;
         await TokenService.storeToken(
           env.TOKENS,
           token,
           { username: body.username, password: body.password },
-          encryptionKey
+          encryptionKey,
+          maxTokensPerUser
         );
 
         const calendarUrl = `${url.origin}/calendar/${token}?key=${encodeURIComponent(encryptionKey)}`;
