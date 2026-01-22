@@ -135,6 +135,8 @@ export class ICalService {
 
     if (courseType === "EXAM_SURV") {
       summary = `🎓 ${summary}`;
+    } else if (courseType === "AUTO_APPR") {
+      summary = `🏠 ${summary}`;
     }
 
     summary = this.normalizeSpaces(summary);
