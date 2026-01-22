@@ -36,6 +36,8 @@ Une page d'accueil permet de :
 - **Cache des événements** : Les données du planning sont mises en cache pendant 1 heure (3600 secondes) pour réduire les appels à Aurion
 - **Gestion des sessions** : Les cookies de session sont stockés et réutilisés pendant 1 heure pour éviter les reconnexions fréquentes
 - **Récupération automatique** : En cas d'expiration de session, reconnexion automatique transparente
+- **Déduplication des requêtes** : Les requêtes simultanées pour les mêmes données sont automatiquement dédupliquées pour éviter les appels redondants à Aurion
+- **Hachage sécurisé** : Les clés de cache utilisent SHA-256 pour garantir l'unicité et prévenir les collisions
 
 ## Utilisation
 
@@ -86,7 +88,8 @@ Les identifiants sont **jamais stockés en clair**. Le système utilise :
 
 ### Cache et sessions
 
-- **Cache des événements** : Les données du planning sont mises en cache dans KV avec une clé basée sur un hash des credentials et la période demandée
+- **Cache des événements** : Les données du planning sont mises en cache dans KV avec une clé basée sur un hash SHA-256 des credentials et la période demandée
+- **Déduplication des requêtes** : Un système de verrous empêche les requêtes simultanées pour les mêmes données, réduisant la charge sur Aurion
 - **Sessions Aurion** : Les cookies de session sont stockés dans KV avec une durée de vie de 1 heure
 - **Isolation par utilisateur** : Chaque utilisateur a sa propre clé de cache et de session, garantissant l'isolation des données
 
@@ -152,9 +155,11 @@ src/
 │   └── session.service.ts          # Gestion des cookies et sessions HTTP
 ├── templates/
 │   └── homepage.template.ts        # Template HTML de la page d'accueil
-└── types/
-    ├── auth.types.ts               # Types pour l'authentification
-    └── token.types.ts              # Types pour les tokens
+├── types/
+│   ├── auth.types.ts               # Types pour l'authentification
+│   └── token.types.ts              # Types pour les tokens
+└── utils/
+    └── crypto.util.ts              # Utilitaires cryptographiques (SHA-256)
 ```
 
 ## Fonctionnement
@@ -194,3 +199,4 @@ Le service parse automatiquement les événements Aurion pour extraire :
 - Le cache et les sessions expirent automatiquement après 1 heure
 - Chaque utilisateur est isolé avec ses propres clés de cache et session
 - La limite de tokens empêche la création excessive de tokens
+- Les clés de cache utilisent SHA-256 pour garantir l'unicité et prévenir les collisions de hachage

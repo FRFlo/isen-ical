@@ -243,20 +243,22 @@ export const PRIVACY_TEMPLATE = `<!DOCTYPE html>
           <li>Période couverte par le cache</li>
         </ul>
       </li>
-      <li><strong>Clé de cache :</strong> Basée sur un hash des credentials et la période demandée</li>
+      <li><strong>Clé de cache :</strong> Basée sur un hash SHA-256 des credentials et la période demandée</li>
       <li><strong>Durée de vie :</strong> 1 heure (3600 secondes)</li>
       <li><strong>Isolation :</strong> Chaque utilisateur a sa propre clé de cache</li>
+      <li><strong>Déduplication :</strong> Un système de verrous empêche les requêtes simultanées pour les mêmes données</li>
     </ul>
 
     <div class="code">
-      Clé de cache : events:user:{email}:{hash}:{startTimestamp}:{endTimestamp}<br>
+      Clé de cache : events:user:{email}:{hashSHA256}:{startTimestamp}:{endTimestamp}<br>
       Contenu : JSON array des événements Aurion
     </div>
 
     <div class="info-box">
       <strong>Pourquoi le cache ?</strong> Le cache réduit la charge sur les serveurs Aurion 
       et améliore la rapidité de réponse. Les données sont automatiquement rafraîchies après 
-      expiration du cache.
+      expiration du cache. Le système de déduplication empêche plusieurs requêtes simultanées 
+      pour les mêmes données, optimisant encore davantage les performances.
     </div>
 
     <h3>3. Sessions Aurion (KV namespace: SESSIONS)</h3>
@@ -271,14 +273,14 @@ export const PRIVACY_TEMPLATE = `<!DOCTYPE html>
           <li>Aucune information d'authentification</li>
         </ul>
       </li>
-      <li><strong>Clé de session :</strong> Basée sur un hash des credentials</li>
+      <li><strong>Clé de session :</strong> Basée sur un hash SHA-256 des credentials</li>
       <li><strong>Durée de vie :</strong> 1 heure (3600 secondes)</li>
       <li><strong>Isolation :</strong> Chaque utilisateur a sa propre session</li>
     </ul>
 
     <div class="code">
-      Clé de session : user:{email}:{hash}<br>
-      Contenu : JSON object avec les cookies de session
+      Clé de session : user:{email}:{hashSHA256}<br>
+      Contenu : JSON object avec les cookies de session (format: { cookies: {...}, createdAt: timestamp })
     </div>
 
     <div class="warning-box">
@@ -325,13 +327,15 @@ export const PRIVACY_TEMPLATE = `<!DOCTYPE html>
     </p>
     <ul>
       <li><strong>Tokens :</strong> Liste séparée par utilisateur (clé : user:{email}:tokens)</li>
-      <li><strong>Cache :</strong> Clé unique basée sur le hash des credentials de l'utilisateur</li>
-      <li><strong>Sessions :</strong> Clé unique basée sur le hash des credentials de l'utilisateur</li>
+      <li><strong>Cache :</strong> Clé unique basée sur le hash SHA-256 des credentials de l'utilisateur</li>
+      <li><strong>Sessions :</strong> Clé unique basée sur le hash SHA-256 des credentials de l'utilisateur</li>
+      <li><strong>Verrous de requête :</strong> Verrous temporaires pour dédupliquer les requêtes simultanées (clé : lock:{userKey}:{start}:{end})</li>
     </ul>
 
     <p>
       Il est impossible pour un utilisateur d'accéder aux données d'un autre utilisateur, même 
-      en connaissant son email, car les clés incluent un hash des credentials complets.
+      en connaissant son email, car les clés incluent un hash SHA-256 des credentials complets. 
+      L'utilisation de SHA-256 garantit l'unicité des clés et prévient les collisions de hachage.
     </p>
 
     <h2>Durée de conservation</h2>
