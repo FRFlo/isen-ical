@@ -138,6 +138,17 @@ export default {
       }
     }
 
+    if (method === 'GET' && pathname === '/privacy') {
+      const privacyPage = TemplateService.renderTemplate(TemplateName.PRIVACY, {});
+      
+      return new Response(privacyPage, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+        },
+      });
+    }
+
     const acceptHeader = request.headers.get('Accept') || '';
     const baseUrl = url.origin;
     

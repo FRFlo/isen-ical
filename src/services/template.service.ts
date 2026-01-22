@@ -1,4 +1,5 @@
 import { HOMEPAGE_TEMPLATE } from '../templates/homepage.template';
+import { PRIVACY_TEMPLATE } from '../templates/privacy.template';
 
 export interface TemplateVariables {
   [key: string]: string;
@@ -6,10 +7,12 @@ export interface TemplateVariables {
 
 export enum TemplateName {
   HOMEPAGE = 'homepage',
+  PRIVACY = 'privacy',
 }
 
 const TEMPLATES: Record<TemplateName, string> = {
   [TemplateName.HOMEPAGE]: HOMEPAGE_TEMPLATE,
+  [TemplateName.PRIVACY]: PRIVACY_TEMPLATE,
 };
 
 export class TemplateService {

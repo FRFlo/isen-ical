@@ -171,6 +171,9 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
       text-decoration: none;
       font-size: 14px;
       transition: color 0.2s;
+      margin: 0 16px;
+      vertical-align: middle;
+      line-height: 1;
     }
     .footer-link:hover {
       color: #333;
@@ -178,6 +181,16 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
     .footer-icon {
       width: 20px;
       height: 20px;
+      display: block;
+      flex-shrink: 0;
+    }
+    .footer-separator {
+      display: inline-block;
+      width: 1px;
+      height: 20px;
+      background: #ddd;
+      margin: 0 8px;
+      vertical-align: middle;
     }
   </style>
 </head>
@@ -233,6 +246,8 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
     </div>
 
     <footer class="footer">
+      <a href="/privacy" class="footer-link">Confidentialité</a>
+      <span class="footer-separator"></span>
       <a href="https://github.com/FRFlo/isen-ical" target="_blank" rel="noopener noreferrer" class="footer-link">
         <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/github.svg" alt="GitHub" class="footer-icon">
         <span>Voir sur GitHub</span>
