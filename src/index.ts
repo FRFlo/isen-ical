@@ -146,11 +146,10 @@ function generateHomepage(baseUrl: string): string {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const acceptHeader = request.headers.get('Accept') || '';
-    const isHtmlRequest = acceptHeader.includes('text/html');
+    const url = new URL(request.url);
+    const baseUrl = url.origin;
     
-    if (isHtmlRequest) {
-      const url = new URL(request.url);
-      const baseUrl = url.origin;
+    if (acceptHeader.includes('text/html')) {
       const homepage = generateHomepage(baseUrl);
       
       return new Response(homepage, {
@@ -170,7 +169,7 @@ export default {
       try {
         const aurionService = new AurionService(env);
         const events = await aurionService.getPlanning(username, password);
-        const ical = icalService.fromAurionEvents(events, username);
+        const ical = icalService.fromAurionEvents(events);
 
         return new Response(ical, {
           status: 200,
@@ -198,9 +197,7 @@ export default {
       }
     }
 
-    const isCalendarRequest = acceptHeader.includes('text/calendar');
-    
-    if (isCalendarRequest) {
+    if (acceptHeader.includes('text/calendar')) {
       if (parseResult.reason === 'missing_header') {
         return new Response('Authorization required', {
           status: 401,
@@ -218,8 +215,6 @@ export default {
       });
     }
 
-    const url = new URL(request.url);
-    const baseUrl = url.origin;
     const homepage = generateHomepage(baseUrl);
     
     return new Response(homepage, {

@@ -173,7 +173,7 @@ export class ICalService {
     return new Date(dateValue);
   }
 
-  fromAurionEvents(aurionEvents: AurionEvent[], username: string): string {
+  fromAurionEvents(aurionEvents: AurionEvent[]): string {
     const icalEvents: ICalEvent[] = aurionEvents.map((event) => {
       const parsed = this.parseAurionTitle(event.title);
       return {
@@ -189,18 +189,4 @@ export class ICalService {
     return this.generate(icalEvents);
   }
 
-  generatePlaceholder(username: string): string {
-    const now = new Date();
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-
-    const placeholderEvent: ICalEvent = {
-      uid: `placeholder-${username}@isen-ical`,
-      summary: "Sample Event",
-      description: `This is a placeholder event for ${username}`,
-      dtstart: now,
-      dtend: oneHourLater,
-    };
-
-    return this.generate([placeholderEvent]);
-  }
 }

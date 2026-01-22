@@ -1,36 +1,9 @@
 import type {
   AuthCredentials,
   AuthResult,
-  AuthServiceConfig,
-  IAuthService,
 } from '../types/auth.types';
 
-export class AuthService implements IAuthService {
-  private validateFn: (username: string, password: string) => Promise<boolean>;
-
-  constructor(config?: AuthServiceConfig) {
-    this.validateFn = config?.validateFn ?? this.defaultValidation;
-  }
-
-  private async defaultValidation(
-    username: string,
-    password: string
-  ): Promise<boolean> {
-    return username.length > 0 && password.length > 0;
-  }
-
-  async validate(username: string, password: string): Promise<AuthResult> {
-    const isValid = await this.validateFn(username, password);
-
-    if (!isValid) {
-      return { success: false, reason: 'invalid_credentials' };
-    }
-
-    return {
-      success: true,
-      credentials: { username, password },
-    };
-  }
+export class AuthService {
 
   static parseAuthorizationHeader(header: string | null): AuthResult {
     if (!header) {
@@ -64,8 +37,4 @@ export class AuthService implements IAuthService {
     };
   }
 
-  static extractCredentials(header: string | null): AuthCredentials | null {
-    const result = AuthService.parseAuthorizationHeader(header);
-    return result.success ? result.credentials : null;
-  }
 }
