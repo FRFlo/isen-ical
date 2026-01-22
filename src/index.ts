@@ -163,65 +163,50 @@ export default {
     const authHeader = request.headers.get('Authorization');
     const parseResult = AuthService.parseAuthorizationHeader(authHeader);
 
-    if (parseResult.success) {
-      const { username, password } = parseResult.credentials;
-
-      try {
-        const aurionService = new AurionService(env);
-        const events = await aurionService.getPlanning(username, password);
-        const ical = icalService.fromAurionEvents(events);
-
-        return new Response(ical, {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/calendar; charset=utf-8',
-            'Content-Disposition': `attachment; filename="${username}-calendar.ics"`,
-          },
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unknown error';
-
-        if (
-          message.includes('Login failed') ||
-          message.includes('No session cookie')
-        ) {
-          return new Response('Invalid credentials', {
-            status: 403,
-          });
-        }
-
-        return new Response(`Error fetching schedule: ${message}`, {
-          status: 500,
-        });
-      }
-    }
-
-    if (acceptHeader.includes('text/calendar')) {
-      if (parseResult.reason === 'missing_header') {
-        return new Response('Authorization required', {
+    if (!parseResult.success) {
+      return new Response(
+        parseResult.reason === 'missing_header'
+          ? 'Authorization required'
+          : 'Invalid authorization format',
+        {
           status: 401,
           headers: {
-            'WWW-Authenticate': 'Basic realm="Calendrier JUNIA"',
+            'WWW-Authenticate': 'Basic realm="Identifiants Aurion"',
           },
+        }
+      );
+    }
+
+    const { username, password } = parseResult.credentials;
+
+    try {
+      const aurionService = new AurionService(env);
+      const events = await aurionService.getPlanning(username, password);
+      const ical = icalService.fromAurionEvents(events);
+
+      return new Response(ical, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/calendar; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="isen-ical.ics"',
+        },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown error';
+
+      if (
+        message.includes('Login failed') ||
+        message.includes('No session cookie')
+      ) {
+        return new Response('Invalid credentials', {
+          status: 403,
         });
       }
 
-      return new Response('Invalid authorization format', {
-        status: 401,
-        headers: {
-          'WWW-Authenticate': 'Basic realm="Calendrier JUNIA"',
-        },
+      return new Response(`Error fetching schedule: ${message}`, {
+        status: 500,
       });
     }
-
-    const homepage = generateHomepage(baseUrl);
-    
-    return new Response(homepage, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-      },
-    });
   },
 };
