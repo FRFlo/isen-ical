@@ -4,8 +4,10 @@ import {
 } from './page-parser.service';
 import { SessionService } from './session.service';
 import type { Env } from '../index';
+import { sha256Hash } from '../utils/crypto.util';
 
 const CACHE_TTL_SECONDS = 3600;
+const REQUEST_LOCK_TTL_SECONDS = 60; // Lock expires after 60 seconds to prevent stuck locks
 
 export class AurionService {
   private session: SessionService;
@@ -20,18 +22,18 @@ export class AurionService {
     this.env = env;
   }
 
-  private getUserKey(email: string, password: string): string {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(`${email}:${password}`);
-    let hash = 0;
-    for (const byte of data) {
-      hash = ((hash << 5) - hash + byte) | 0;
-    }
-    return `user:${email}:${hash.toString(16)}`;
+  private async getUserKey(email: string, password: string): Promise<string> {
+    const hash = await sha256Hash(`${email}:${password}`);
+    // Use first 16 characters of hash for shorter keys while maintaining uniqueness
+    return `user:${email}:${hash.substring(0, 16)}`;
   }
 
   private getCacheKey(userKey: string, start: number, end: number): string {
     return `events:${userKey}:${start}:${end}`;
+  }
+
+  private getRequestLockKey(userKey: string, start: number, end: number): string {
+    return `lock:${userKey}:${start}:${end}`;
   }
 
   async login(email: string, password: string): Promise<void> {
@@ -137,34 +139,64 @@ export class AurionService {
     const start = startTimestamp ?? Date.now() - 7 * 24 * 60 * 60 * 1000;
     const end = endTimestamp ?? start + 60 * 24 * 60 * 60 * 1000;
 
-    const userKey = this.getUserKey(email, password);
+    const userKey = await this.getUserKey(email, password);
     const cacheKey = this.getCacheKey(userKey, start, end);
 
+    // Check cache first
     const cachedEvents = await this.env.CACHE.get(cacheKey);
     if (cachedEvents) {
       return JSON.parse(cachedEvents) as AurionEvent[];
     }
 
-    this.session.setKV(this.env.SESSIONS, userKey);
-    const hasSession = await this.session.loadFromKV();
-
-    if (!hasSession) {
-      await this.login(email, password);
+    // Check for existing request lock (request deduplication)
+    const lockKey = this.getRequestLockKey(userKey, start, end);
+    const existingLock = await this.env.CACHE.get(lockKey);
+    
+    if (existingLock) {
+      // Another request is already fetching this data
+      // Poll the cache a few times (using microtask delays) to see if the other request completed
+      for (let i = 0; i < 5; i++) {
+        // Use microtask delay (not a real delay, but allows other tasks to complete)
+        await Promise.resolve();
+        
+        const cached = await this.env.CACHE.get(cacheKey);
+        if (cached) {
+          return JSON.parse(cached) as AurionEvent[];
+        }
+        
+        // Check if lock still exists
+        const lockStillExists = await this.env.CACHE.get(lockKey);
+        if (!lockStillExists) {
+          // Lock expired or was released, proceed with our own request
+          break;
+        }
+      }
+      
+      // If cache still not available after polling, proceed with our own request
+      // (the other request might have failed or is taking too long)
     }
 
+    // Acquire lock
+    await this.env.CACHE.put(lockKey, Date.now().toString(), {
+      expirationTtl: REQUEST_LOCK_TTL_SECONDS,
+    });
+
     try {
-      await this.initializeSession();
-      await this.navigateToPlanning();
-      const events = await this.fetchPlanningData(start, end);
+      // Double-check cache after acquiring lock (another request might have completed)
+      const cachedAfterLock = await this.env.CACHE.get(cacheKey);
+      if (cachedAfterLock) {
+        await this.env.CACHE.delete(lockKey);
+        return JSON.parse(cachedAfterLock) as AurionEvent[];
+      }
 
-      await this.env.CACHE.put(cacheKey, JSON.stringify(events), {
-        expirationTtl: CACHE_TTL_SECONDS,
-      });
+      this.session.setKV(this.env.SESSIONS, userKey);
+      const hasSession = await this.session.loadFromKV();
 
-      return events;
-    } catch (error) {
-      if (hasSession) {
+      if (!hasSession) {
         await this.login(email, password);
+      }
+
+      try {
         await this.initializeSession();
         await this.navigateToPlanning();
         const events = await this.fetchPlanningData(start, end);
@@ -173,8 +205,34 @@ export class AurionService {
           expirationTtl: CACHE_TTL_SECONDS,
         });
 
+        // Release lock
+        await this.env.CACHE.delete(lockKey);
+
         return events;
+      } catch (error) {
+        if (hasSession) {
+          // Session might have expired, try re-login
+          await this.login(email, password);
+          await this.initializeSession();
+          await this.navigateToPlanning();
+          const events = await this.fetchPlanningData(start, end);
+
+          await this.env.CACHE.put(cacheKey, JSON.stringify(events), {
+            expirationTtl: CACHE_TTL_SECONDS,
+          });
+
+          // Release lock
+          await this.env.CACHE.delete(lockKey);
+
+          return events;
+        }
+        // Release lock on error
+        await this.env.CACHE.delete(lockKey);
+        throw error;
       }
+    } catch (error) {
+      // Release lock on error
+      await this.env.CACHE.delete(lockKey);
       throw error;
     }
   }
