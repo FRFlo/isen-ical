@@ -226,9 +226,9 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
         Cliquez sur le bouton "Ajouter à Google Calendar" ci-dessus, ou suivez ces étapes manuelles :<br>
         1. Copiez l'URL ci-dessus<br>
         2. Ouvrez Google Calendar<br>
-        3. Cliquez sur le "+" à côté de "Autres calendriers"<br>
+        3. Cliquez sur le "+" à côté de "Autres agendas"<br>
         4. Sélectionnez "À partir de l'URL"<br>
-        5. Collez l'URL et cliquez sur "Ajouter le calendrier"
+        5. Collez l'URL et cliquez sur "Ajouter un agenda"
       </div>
     </div>
 
