@@ -1,3 +1,4 @@
+import type { ScheduledController, ExecutionContext } from '@cloudflare/workers-types';
 import { AuthService } from './services/auth.service';
 import { AurionService } from './services/aurion.service';
 import { ICalService } from './services/ical.service';
@@ -14,6 +15,21 @@ export interface Env {
 const icalService = new ICalService();
 
 export default {
+  async scheduled(
+    controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<void> {
+    const maxAgeDays = 365;
+    const result = await TokenService.cleanupOrphanTokens(
+      env.TOKENS,
+      maxAgeDays
+    );
+    console.log(
+      `Nettoyage des tokens orphelins terminé: ${result.cleaned} tokens supprimés, ${result.errors} erreurs`
+    );
+  },
+
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const pathname = url.pathname;

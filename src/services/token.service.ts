@@ -167,6 +167,7 @@ export class TokenService {
 
     await kv.put(`token:${token}`, JSON.stringify(stored));
     await this.addTokenToUser(kv, credentials.username, token, createdAt);
+    await this.addUserToIndex(kv, credentials.username);
   }
 
   static async getCredentials(
@@ -188,6 +189,82 @@ export class TokenService {
       );
     } catch (error) {
       return null;
+    }
+  }
+
+  static async cleanupOrphanTokens(
+    kv: KVNamespace,
+    maxAgeDays: number = 365
+  ): Promise<{ cleaned: number; errors: number }> {
+    const maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    let cleaned = 0;
+    let errors = 0;
+
+    try {
+      const usersListKey = 'users:list';
+      const usersListData = await kv.get(usersListKey);
+      const users: string[] = usersListData ? JSON.parse(usersListData) : [];
+
+      for (const email of users) {
+        try {
+          const tokens = await this.getUserTokens(kv, email);
+          const validTokens: UserTokenList = [];
+
+          for (const tokenEntry of tokens) {
+            const tokenData = await kv.get(`token:${tokenEntry.token}`);
+            
+            if (!tokenData) {
+              cleaned++;
+              continue;
+            }
+
+            try {
+              const stored = JSON.parse(tokenData) as StoredToken;
+              const age = now - stored.createdAt;
+
+              if (age > maxAge) {
+                await kv.delete(`token:${tokenEntry.token}`);
+                cleaned++;
+              } else {
+                validTokens.push(tokenEntry);
+              }
+            } catch {
+              await kv.delete(`token:${tokenEntry.token}`);
+              cleaned++;
+            }
+          }
+
+          if (validTokens.length !== tokens.length) {
+            const userTokensKey = `user:${email}:tokens`;
+            if (validTokens.length === 0) {
+              await kv.delete(userTokensKey);
+            } else {
+              await kv.put(userTokensKey, JSON.stringify(validTokens));
+            }
+          }
+        } catch (error) {
+          errors++;
+        }
+      }
+    } catch (error) {
+      errors++;
+    }
+
+    return { cleaned, errors };
+  }
+
+  static async addUserToIndex(
+    kv: KVNamespace,
+    email: string
+  ): Promise<void> {
+    const usersListKey = 'users:list';
+    const usersListData = await kv.get(usersListKey);
+    const users: Set<string> = new Set(usersListData ? JSON.parse(usersListData) : []);
+    
+    if (!users.has(email)) {
+      users.add(email);
+      await kv.put(usersListKey, JSON.stringify([...users]));
     }
   }
 }
