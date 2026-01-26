@@ -4,12 +4,13 @@
   "description": "Cloudflare Worker qui transforme Aurion en iCal",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "localflare",
     "deploy": "wrangler deploy",
     "build": "wrangler deploy --dry-run"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241218.0",
+    "localflare": "^0.4.1",
     "typescript": "^5.7.2",
     "wrangler": "^4.59.3"
   }
