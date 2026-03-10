@@ -139,6 +139,7 @@ Le worker nécessite trois namespaces KV configurés dans `wrangler.jsonc` :
 ### Variables d'environnement
 
 - `MAX_TOKENS_PER_USER` (optionnel) : Nombre maximum de tokens par utilisateur (défaut : 3)
+- `DISABLE_CACHE` (optionnel) : Désactive complètement le cache et la réutilisation de sessions KV (`true`, `1` ou `yes`)
 
 ## Structure du projet
 

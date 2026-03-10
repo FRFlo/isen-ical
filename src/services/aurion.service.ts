@@ -1,13 +1,11 @@
-import {
-  PageParserService,
-  type AurionEvent,
-} from './page-parser.service';
+import { PageParserService } from './page-parser.service';
+import type { AurionEvent, AurionEventDetails } from '../types/aurion.types';
 import { SessionService } from './session.service';
 import type { Env } from '../index';
 import { sha256Hash } from '../utils/crypto.util';
 
 const CACHE_TTL_SECONDS = 3600;
-const REQUEST_LOCK_TTL_SECONDS = 60; // Lock expires after 60 seconds to prevent stuck locks
+const REQUEST_LOCK_TTL_SECONDS = 60;
 
 export class AurionService {
   private session: SessionService;
@@ -20,6 +18,16 @@ export class AurionService {
   constructor(env: Env) {
     this.session = new SessionService();
     this.env = env;
+  }
+
+  private isCacheDisabled(): boolean {
+    const value = this.env.DISABLE_CACHE;
+    if (!value) {
+      return false;
+    }
+
+    const normalized = value.toLowerCase();
+    return normalized === 'true' || normalized === '1' || normalized === 'yes';
   }
 
   private async getUserKey(email: string, password: string): Promise<string> {
@@ -130,63 +138,115 @@ export class AurionService {
     return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
   }
 
+  private async fetchSingleEventDetails(eventId: string): Promise<string> {
+    const postData = new URLSearchParams({
+      'javax.faces.partial.ajax': 'true',
+      'javax.faces.source': this.formIdPlanning,
+      'javax.faces.partial.execute': this.formIdPlanning,
+      'javax.faces.partial.render': this.formIdPlanning,
+      [this.formIdPlanning]: this.formIdPlanning,
+      [`${this.formIdPlanning}_selectedEventId`]: eventId,
+      form: 'form',
+      'form:largeurDivCenter': '',
+      'form:idInit': this.idInit,
+      'javax.faces.ViewState': this.viewState,
+    }).toString();
+
+    const res = await this.session.post('/faces/Planning.xhtml', {
+      body: postData,
+    });
+
+    return res.body;
+  }
+
+  private async enrichEvents(events: AurionEvent[]): Promise<AurionEventDetails[]> {
+    const enrichedEvents: AurionEventDetails[] = [];
+
+    for (const event of events) {
+      const html = await this.fetchSingleEventDetails(event.id);
+      const details = PageParserService.parseSingleEvent(html);
+
+      enrichedEvents.push({
+        ...event,
+        status: details.status ?? '',
+        subject: details.subject ?? '',
+        type: details.type ?? '',
+        description: details.description ?? '',
+        isExam: details.isExam ?? false,
+        resources: details.resources ?? [],
+        teachers: details.teachers ?? [],
+        students: details.students ?? [],
+        groups: details.groups ?? [],
+        courses: details.courses ?? [],
+      });
+    }
+
+    return enrichedEvents;
+  }
+
   async getPlanning(
     email: string,
     password: string,
     startTimestamp?: number,
     endTimestamp?: number
-  ): Promise<AurionEvent[]> {
+  ): Promise<AurionEventDetails[]> {
     const start = startTimestamp ?? Date.now() - 7 * 24 * 60 * 60 * 1000;
     const end = endTimestamp ?? start + 60 * 24 * 60 * 60 * 1000;
+    const disableCache = this.isCacheDisabled();
+
+    if (disableCache) {
+      await this.login(email, password);
+
+      try {
+        await this.initializeSession();
+        await this.navigateToPlanning();
+        const baseEvents = await this.fetchPlanningData(start, end);
+        return this.enrichEvents(baseEvents);
+      } catch (error) {
+        await this.login(email, password);
+        await this.initializeSession();
+        await this.navigateToPlanning();
+        const baseEvents = await this.fetchPlanningData(start, end);
+        return this.enrichEvents(baseEvents);
+      }
+    }
 
     const userKey = await this.getUserKey(email, password);
     const cacheKey = this.getCacheKey(userKey, start, end);
 
-    // Check cache first
     const cachedEvents = await this.env.CACHE.get(cacheKey);
     if (cachedEvents) {
-      return JSON.parse(cachedEvents) as AurionEvent[];
+      return JSON.parse(cachedEvents) as AurionEventDetails[];
     }
 
-    // Check for existing request lock (request deduplication)
     const lockKey = this.getRequestLockKey(userKey, start, end);
     const existingLock = await this.env.CACHE.get(lockKey);
-    
+
     if (existingLock) {
-      // Another request is already fetching this data
-      // Poll the cache a few times (using microtask delays) to see if the other request completed
       for (let i = 0; i < 5; i++) {
-        // Use microtask delay (not a real delay, but allows other tasks to complete)
         await Promise.resolve();
-        
+
         const cached = await this.env.CACHE.get(cacheKey);
         if (cached) {
-          return JSON.parse(cached) as AurionEvent[];
+          return JSON.parse(cached) as AurionEventDetails[];
         }
-        
-        // Check if lock still exists
+
         const lockStillExists = await this.env.CACHE.get(lockKey);
         if (!lockStillExists) {
-          // Lock expired or was released, proceed with our own request
           break;
         }
       }
-      
-      // If cache still not available after polling, proceed with our own request
-      // (the other request might have failed or is taking too long)
     }
 
-    // Acquire lock
     await this.env.CACHE.put(lockKey, Date.now().toString(), {
       expirationTtl: REQUEST_LOCK_TTL_SECONDS,
     });
 
     try {
-      // Double-check cache after acquiring lock (another request might have completed)
       const cachedAfterLock = await this.env.CACHE.get(cacheKey);
       if (cachedAfterLock) {
         await this.env.CACHE.delete(lockKey);
-        return JSON.parse(cachedAfterLock) as AurionEvent[];
+        return JSON.parse(cachedAfterLock) as AurionEventDetails[];
       }
 
       this.session.setKV(this.env.SESSIONS, userKey);
@@ -199,43 +259,38 @@ export class AurionService {
       try {
         await this.initializeSession();
         await this.navigateToPlanning();
-        const events = await this.fetchPlanningData(start, end);
+        const baseEvents = await this.fetchPlanningData(start, end);
+        const events = await this.enrichEvents(baseEvents);
 
         await this.env.CACHE.put(cacheKey, JSON.stringify(events), {
           expirationTtl: CACHE_TTL_SECONDS,
         });
 
-        // Release lock
         await this.env.CACHE.delete(lockKey);
 
         return events;
       } catch (error) {
         if (hasSession) {
-          // Session might have expired, try re-login
           await this.login(email, password);
           await this.initializeSession();
           await this.navigateToPlanning();
-          const events = await this.fetchPlanningData(start, end);
+          const baseEvents = await this.fetchPlanningData(start, end);
+          const events = await this.enrichEvents(baseEvents);
 
           await this.env.CACHE.put(cacheKey, JSON.stringify(events), {
             expirationTtl: CACHE_TTL_SECONDS,
           });
 
-          // Release lock
           await this.env.CACHE.delete(lockKey);
 
           return events;
         }
-        // Release lock on error
         await this.env.CACHE.delete(lockKey);
         throw error;
       }
     } catch (error) {
-      // Release lock on error
       await this.env.CACHE.delete(lockKey);
       throw error;
     }
   }
 }
-
-export type { AurionEvent };

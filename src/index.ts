@@ -10,6 +10,7 @@ export interface Env {
   CACHE: KVNamespace;
   TOKENS: KVNamespace;
   MAX_TOKENS_PER_USER?: number;
+  DISABLE_CACHE?: string;
 }
 
 const icalService = new ICalService();
