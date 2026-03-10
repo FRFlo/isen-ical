@@ -14,10 +14,19 @@ export class AurionService {
   private idInit = '';
   private formIdPlanning = '';
   private env: Env;
+  private trackEvent?: (event: string, properties?: Record<string, unknown>) => void;
 
-  constructor(env: Env) {
+  constructor(
+    env: Env,
+    trackEvent?: (event: string, properties?: Record<string, unknown>) => void
+  ) {
     this.session = new SessionService();
     this.env = env;
+    this.trackEvent = trackEvent;
+  }
+
+  private track(event: string, properties?: Record<string, unknown>): void {
+    this.trackEvent?.(event, properties);
   }
 
   private isCacheDisabled(): boolean {
@@ -45,16 +54,21 @@ export class AurionService {
   }
 
   async login(email: string, password: string): Promise<void> {
+    this.track('aurion_login_started');
     await this.session.login(email, password);
+    this.track('aurion_login_succeeded');
   }
 
   private async initializeSession(): Promise<void> {
+    this.track('aurion_initialize_session_started');
     const res = await this.session.get('/');
     this.viewState = PageParserService.parseViewState(res.body);
     this.idInit = PageParserService.parseIdInit(res.body);
+    this.track('aurion_initialize_session_succeeded');
   }
 
   private async navigateToPlanning(): Promise<void> {
+    this.track('aurion_navigate_to_planning_started');
     const sidebarRes = await this.session.get('/faces/MainMenuPage.xhtml', {
       referer: 'https://aurion.junia.com/',
     });
@@ -87,12 +101,14 @@ export class AurionService {
     this.formIdPlanning = PageParserService.parseFormIdPlanning(
       planningPage.body
     );
+    this.track('aurion_navigate_to_planning_succeeded');
   }
 
   private async fetchPlanningData(
     start: number,
     end: number
   ): Promise<AurionEvent[]> {
+    this.track('aurion_fetch_planning_started', { start, end });
     const now = new Date(start);
     const today = now.toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -127,8 +143,13 @@ export class AurionService {
     const res = await this.session.post('/faces/Planning.xhtml', {
       body: postData,
     });
-
-    return PageParserService.parsePlanningData(res.body);
+    const events = PageParserService.parsePlanningData(res.body);
+    this.track('aurion_fetch_planning_succeeded', {
+      eventsCount: events.length,
+      start,
+      end,
+    });
+    return events;
   }
 
   private getWeekNumber(date: Date): number {
@@ -160,6 +181,7 @@ export class AurionService {
   }
 
   private async enrichEvents(events: AurionEvent[]): Promise<AurionEventDetails[]> {
+    this.track('aurion_enrich_events_started', { eventsCount: events.length });
     const enrichedEvents: AurionEventDetails[] = [];
 
     for (const event of events) {
@@ -180,7 +202,9 @@ export class AurionService {
         courses: details.courses ?? [],
       });
     }
-
+    this.track('aurion_enrich_events_succeeded', {
+      eventsCount: enrichedEvents.length,
+    });
     return enrichedEvents;
   }
 
@@ -194,40 +218,68 @@ export class AurionService {
     const end = endTimestamp ?? start + 60 * 24 * 60 * 60 * 1000;
     const disableCache = this.isCacheDisabled();
 
+    this.track('planning_request_started', {
+      start,
+      end,
+      disableCache,
+    });
+
     if (disableCache) {
+      this.track('planning_cache_disabled');
       await this.login(email, password);
 
       try {
         await this.initializeSession();
         await this.navigateToPlanning();
         const baseEvents = await this.fetchPlanningData(start, end);
-        return this.enrichEvents(baseEvents);
+        const events = await this.enrichEvents(baseEvents);
+        this.track('planning_request_succeeded', {
+          source: 'aurion',
+          cache: 'disabled',
+          eventsCount: events.length,
+        });
+        return events;
       } catch (error) {
+        this.track('planning_retry_after_error', {
+          cache: 'disabled',
+        });
         await this.login(email, password);
         await this.initializeSession();
         await this.navigateToPlanning();
         const baseEvents = await this.fetchPlanningData(start, end);
-        return this.enrichEvents(baseEvents);
+        const events = await this.enrichEvents(baseEvents);
+        this.track('planning_request_succeeded', {
+          source: 'aurion',
+          cache: 'disabled',
+          retried: true,
+          eventsCount: events.length,
+        });
+        return events;
       }
     }
 
     const userKey = await this.getUserKey(email, password);
     const cacheKey = this.getCacheKey(userKey, start, end);
 
+    this.track('planning_cache_lookup_started');
     const cachedEvents = await this.env.CACHE.get(cacheKey);
     if (cachedEvents) {
+      this.track('planning_cache_hit');
       return JSON.parse(cachedEvents) as AurionEventDetails[];
     }
+    this.track('planning_cache_miss');
 
     const lockKey = this.getRequestLockKey(userKey, start, end);
     const existingLock = await this.env.CACHE.get(lockKey);
 
     if (existingLock) {
+      this.track('planning_lock_detected');
       for (let i = 0; i < 5; i++) {
         await Promise.resolve();
 
         const cached = await this.env.CACHE.get(cacheKey);
         if (cached) {
+          this.track('planning_cache_hit_after_lock_wait', { waitIteration: i + 1 });
           return JSON.parse(cached) as AurionEventDetails[];
         }
 
@@ -241,16 +293,20 @@ export class AurionService {
     await this.env.CACHE.put(lockKey, Date.now().toString(), {
       expirationTtl: REQUEST_LOCK_TTL_SECONDS,
     });
+    this.track('planning_lock_acquired');
 
     try {
       const cachedAfterLock = await this.env.CACHE.get(cacheKey);
       if (cachedAfterLock) {
         await this.env.CACHE.delete(lockKey);
+        this.track('planning_cache_hit_after_lock_acquire');
+        this.track('planning_lock_released');
         return JSON.parse(cachedAfterLock) as AurionEventDetails[];
       }
 
       this.session.setKV(this.env.SESSIONS, userKey);
       const hasSession = await this.session.loadFromKV();
+      this.track('planning_session_lookup_result', { hasSession });
 
       if (!hasSession) {
         await this.login(email, password);
@@ -265,12 +321,23 @@ export class AurionService {
         await this.env.CACHE.put(cacheKey, JSON.stringify(events), {
           expirationTtl: CACHE_TTL_SECONDS,
         });
+        this.track('planning_cache_write_succeeded', { eventsCount: events.length });
 
         await this.env.CACHE.delete(lockKey);
+        this.track('planning_lock_released');
+        this.track('planning_request_succeeded', {
+          source: 'aurion',
+          cache: 'miss',
+          eventsCount: events.length,
+        });
 
         return events;
       } catch (error) {
         if (hasSession) {
+          this.track('planning_retry_after_error', {
+            cache: 'miss',
+            reusedSession: true,
+          });
           await this.login(email, password);
           await this.initializeSession();
           await this.navigateToPlanning();
@@ -280,16 +347,32 @@ export class AurionService {
           await this.env.CACHE.put(cacheKey, JSON.stringify(events), {
             expirationTtl: CACHE_TTL_SECONDS,
           });
+          this.track('planning_cache_write_succeeded', { eventsCount: events.length });
 
           await this.env.CACHE.delete(lockKey);
+          this.track('planning_lock_released');
+          this.track('planning_request_succeeded', {
+            source: 'aurion',
+            cache: 'miss',
+            retried: true,
+            eventsCount: events.length,
+          });
 
           return events;
         }
         await this.env.CACHE.delete(lockKey);
+        this.track('planning_lock_released');
+        this.track('planning_request_failed', {
+          cache: 'miss',
+        });
         throw error;
       }
     } catch (error) {
       await this.env.CACHE.delete(lockKey);
+      this.track('planning_lock_released');
+      this.track('planning_request_failed', {
+        cache: 'miss',
+      });
       throw error;
     }
   }

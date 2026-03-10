@@ -246,9 +246,9 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
     </div>
 
     <footer class="footer">
-      <a href="/privacy" class="footer-link">Confidentialité</a>
+      <a href="/privacy" id="homepage-privacy-link" class="footer-link">Confidentialité</a>
       <span class="footer-separator"></span>
-      <a href="https://github.com/FRFlo/isen-ical" target="_blank" rel="noopener noreferrer" class="footer-link">
+      <a href="https://github.com/FRFlo/isen-ical" id="homepage-github-link" target="_blank" rel="noopener noreferrer" class="footer-link">
         <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/github.svg" alt="GitHub" class="footer-icon">
         <span>Voir sur GitHub</span>
       </a>
@@ -256,6 +256,67 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
   </div>
 
   <script>
+    const pageRequestId = '{{requestId}}';
+    const distinctIdStorageKey = 'isen_ical_distinct_id';
+    const userEmailStorageKey = 'isen_ical_user_email';
+
+    const normalizeEmail = (value) => {
+      if (!value) {
+        return null;
+      }
+      const normalized = String(value).trim().toLowerCase();
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ? normalized : null;
+    };
+
+    const rememberEmail = (email) => {
+      const normalized = normalizeEmail(email);
+      if (normalized) {
+        localStorage.setItem(userEmailStorageKey, normalized);
+      }
+      return normalized;
+    };
+
+    const getKnownEmail = () => normalizeEmail(localStorage.getItem(userEmailStorageKey));
+
+    const getDistinctId = (emailHint) => {
+      const email = rememberEmail(emailHint) || getKnownEmail();
+      if (email) {
+        const distinctId = 'user:' + email;
+        localStorage.setItem(distinctIdStorageKey, distinctId);
+        return distinctId;
+      }
+      const existing = localStorage.getItem(distinctIdStorageKey);
+      if (existing) {
+        return existing;
+      }
+      const created = crypto.randomUUID();
+      localStorage.setItem(distinctIdStorageKey, created);
+      return created;
+    };
+
+    const trackEvent = (event, properties = {}, emailHint) => {
+      const distinctId = getDistinctId(emailHint);
+      const email = getKnownEmail();
+      fetch('/api/track', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-request-id': pageRequestId,
+          'x-trace-id': pageRequestId,
+          'x-distinct-id': distinctId,
+        },
+        keepalive: true,
+        body: JSON.stringify({
+          event,
+          distinctId,
+          properties: {
+            ...properties,
+            ...(email ? { email } : {}),
+          },
+        }),
+      }).catch(() => {});
+    };
+
     const form = document.getElementById('token-form');
     const errorMessage = document.getElementById('error-message');
     const successSection = document.getElementById('success-section');
@@ -263,12 +324,34 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
     const copyBtn = document.getElementById('copy-btn');
     const generateBtn = document.getElementById('generate-btn');
     const googleCalendarLink = document.getElementById('google-calendar-link');
+    const webcalBtn = document.getElementById('webcal-btn');
+    const homepagePrivacyLink = document.getElementById('homepage-privacy-link');
+    const homepageGithubLink = document.getElementById('homepage-github-link');
+
+    trackEvent('frontend_homepage_viewed');
+
+    webcalBtn.addEventListener('click', () => {
+      trackEvent('frontend_webcal_clicked');
+    });
+
+    googleCalendarLink.addEventListener('click', () => {
+      trackEvent('frontend_google_calendar_clicked');
+    });
+
+    homepagePrivacyLink.addEventListener('click', () => {
+      trackEvent('frontend_homepage_privacy_clicked');
+    });
+
+    homepageGithubLink.addEventListener('click', () => {
+      trackEvent('frontend_homepage_github_clicked');
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
+      trackEvent('frontend_token_form_submitted', {}, email);
 
       errorMessage.classList.add('hidden');
       successSection.classList.add('hidden');
@@ -280,6 +363,9 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-request-id': pageRequestId,
+            'x-trace-id': pageRequestId,
+            'x-distinct-id': getDistinctId(email),
           },
           body: JSON.stringify({ username: email, password }),
         });
@@ -295,9 +381,13 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
         googleCalendarLink.href = \`https://calendar.google.com/calendar/render?cid=\${encodedUrl}\`;
         googleCalendarLink.style.display = 'inline-block';
         successSection.classList.remove('hidden');
+        trackEvent('frontend_token_generation_succeeded', {}, email);
       } catch (error) {
         errorMessage.textContent = error.message || 'Une erreur est survenue';
         errorMessage.classList.remove('hidden');
+        trackEvent('frontend_token_generation_failed', {
+          error: error.message || 'unknown_error',
+        }, email);
       } finally {
         generateBtn.disabled = false;
         generateBtn.textContent = 'Générer l\\'URL d\\'abonnement';
@@ -307,10 +397,13 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
     copyBtn.addEventListener('click', () => {
       const url = calendarUrl.textContent;
       navigator.clipboard.writeText(url).then(() => {
+        trackEvent('frontend_calendar_url_copied');
         copyBtn.textContent = 'Copié !';
         setTimeout(() => {
           copyBtn.textContent = 'Copier l\\'URL';
         }, 2000);
+      }).catch(() => {
+        trackEvent('frontend_calendar_url_copy_failed');
       });
     });
   </script>

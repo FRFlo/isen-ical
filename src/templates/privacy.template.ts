@@ -372,13 +372,57 @@ export const PRIVACY_TEMPLATE = `<!DOCTYPE html>
     </p>
 
     <footer class="footer">
-      <a href="/" class="footer-link">← Retour à l'accueil</a>
+      <a href="/" id="privacy-home-link" class="footer-link">← Retour à l'accueil</a>
       <span class="footer-separator"></span>
-      <a href="https://github.com/FRFlo/isen-ical" target="_blank" rel="noopener noreferrer" class="footer-link">
+      <a href="https://github.com/FRFlo/isen-ical" id="privacy-github-link" target="_blank" rel="noopener noreferrer" class="footer-link">
         <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/github.svg" alt="GitHub" class="footer-icon">
         <span>Code source</span>
       </a>
     </footer>
   </div>
+
+  <script>
+    const pageRequestId = '{{requestId}}';
+    const distinctIdStorageKey = 'isen_ical_distinct_id';
+
+    const getDistinctId = () => {
+      const existing = localStorage.getItem(distinctIdStorageKey);
+      if (existing) {
+        return existing;
+      }
+      const created = crypto.randomUUID();
+      localStorage.setItem(distinctIdStorageKey, created);
+      return created;
+    };
+
+    const trackEvent = (event, properties = {}) => {
+      const distinctId = getDistinctId();
+      fetch('/api/track', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-request-id': pageRequestId,
+          'x-trace-id': pageRequestId,
+          'x-distinct-id': distinctId,
+        },
+        keepalive: true,
+        body: JSON.stringify({
+          event,
+          distinctId,
+          properties,
+        }),
+      }).catch(() => {});
+    };
+
+    trackEvent('frontend_privacy_viewed');
+
+    document.getElementById('privacy-home-link').addEventListener('click', () => {
+      trackEvent('frontend_privacy_back_home_clicked');
+    });
+
+    document.getElementById('privacy-github-link').addEventListener('click', () => {
+      trackEvent('frontend_privacy_github_clicked');
+    });
+  </script>
 </body>
 </html>`;

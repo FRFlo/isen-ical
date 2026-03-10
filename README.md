@@ -140,6 +140,8 @@ Le worker nécessite trois namespaces KV configurés dans `wrangler.jsonc` :
 
 - `MAX_TOKENS_PER_USER` (optionnel) : Nombre maximum de tokens par utilisateur (défaut : 3)
 - `DISABLE_CACHE` (optionnel) : Désactive complètement le cache et la réutilisation de sessions KV (`true`, `1` ou `yes`)
+- `POSTHOG_API_KEY` (optionnel) : Clé projet PostHog pour activer la télémétrie backend + frontend
+- `POSTHOG_HOST` (optionnel) : URL PostHog (défaut : `https://eu.i.posthog.com`)
 
 ## Structure du projet
 
