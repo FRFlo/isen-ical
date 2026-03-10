@@ -404,6 +404,31 @@ export default {
       );
     }
 
+    if (method === 'GET' && pathname === '/favicon.ico') {
+      return withRequestId(
+        new Response(null, {
+          status: 204,
+          headers: {
+            'Cache-Control': 'public, max-age=3600',
+          },
+        })
+      );
+    }
+
+    if (
+      method === 'GET' &&
+      pathname === '/.well-known/appspecific/com.chrome.devtools.json'
+    ) {
+      return withRequestId(
+        new Response(null, {
+          status: 204,
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        })
+      );
+    }
+
     const acceptHeader = request.headers.get('Accept') || '';
     const baseUrl = url.origin;
     
