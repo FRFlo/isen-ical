@@ -1,5 +1,5 @@
-import type { ExecutionContext } from '@cloudflare/workers-types';
-import type { Env } from '../index';
+import type { ExecutionContext } from "@cloudflare/workers-types";
+import type { Env } from "../index";
 
 type TelemetryProperties = Record<string, unknown>;
 
@@ -16,7 +16,7 @@ export class TelemetryService {
 
   constructor(env: Env, ctx?: ExecutionContext) {
     this.apiKey = env.POSTHOG_API_KEY;
-    this.host = (env.POSTHOG_HOST || 'https://eu.i.posthog.com').replace(/\/$/, '');
+    this.host = (env.POSTHOG_HOST || "https://eu.i.posthog.com").replace(/\/$/, "");
     this.ctx = ctx;
   }
 
@@ -36,20 +36,20 @@ export class TelemetryService {
       properties: {
         ...event.properties,
         distinct_id: event.distinctId,
-        $lib: 'cloudflare-worker',
+        $lib: "cloudflare-worker",
         $ip: null,
       },
       timestamp: new Date().toISOString(),
     };
 
     const sendPromise = fetch(`${this.host}/capture/`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     }).catch((error) => {
-      console.error('PostHog capture failed', error);
+      console.error("PostHog capture failed", error);
     });
 
     if (this.ctx) {

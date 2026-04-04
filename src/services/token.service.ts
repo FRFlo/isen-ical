@@ -1,6 +1,6 @@
-import type { KVNamespace } from '@cloudflare/workers-types';
-import type { AuthCredentials } from '../types/auth.types';
-import type { StoredToken, UserTokenList } from '../types/token.types';
+import type { KVNamespace } from "@cloudflare/workers-types";
+import type { AuthCredentials } from "../types/auth.types";
+import type { StoredToken, UserTokenList } from "../types/token.types";
 
 export class TokenService {
   static generateToken(): string {
@@ -14,38 +14,34 @@ export class TokenService {
 
   private static base64UrlEncode(bytes: Uint8Array): string {
     const base64 = btoa(String.fromCharCode(...bytes));
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
   }
 
   private static base64UrlDecode(base64Url: string): Uint8Array {
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
     const binary = atob(padded);
     return new Uint8Array([...binary].map((char) => char.charCodeAt(0)));
   }
 
   static async encryptCredentials(
     credentials: AuthCredentials,
-    encryptionKey: string
+    encryptionKey: string,
   ): Promise<{ encrypted: string; iv: string }> {
     const keyBytes = this.base64UrlDecode(encryptionKey);
     const key = await crypto.subtle.importKey(
-      'raw',
+      "raw",
       keyBytes,
-      { name: 'AES-GCM', length: 256 },
+      { name: "AES-GCM", length: 256 },
       false,
-      ['encrypt']
+      ["encrypt"],
     );
 
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const data = JSON.stringify(credentials);
     const encoded = new TextEncoder().encode(data);
 
-    const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
-      key,
-      encoded
-    );
+    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
 
     return {
       encrypted: this.base64UrlEncode(new Uint8Array(encrypted)),
@@ -56,34 +52,31 @@ export class TokenService {
   static async decryptCredentials(
     encrypted: string,
     iv: string,
-    encryptionKey: string
+    encryptionKey: string,
   ): Promise<AuthCredentials> {
     const keyBytes = this.base64UrlDecode(encryptionKey);
     const key = await crypto.subtle.importKey(
-      'raw',
+      "raw",
       keyBytes,
-      { name: 'AES-GCM', length: 256 },
+      { name: "AES-GCM", length: 256 },
       false,
-      ['decrypt']
+      ["decrypt"],
     );
 
     const encryptedBytes = this.base64UrlDecode(encrypted);
     const ivBytes = this.base64UrlDecode(iv);
 
     const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: ivBytes },
+      { name: "AES-GCM", iv: ivBytes },
       key,
-      encryptedBytes
+      encryptedBytes,
     );
 
     const decoded = new TextDecoder().decode(decrypted);
     return JSON.parse(decoded) as AuthCredentials;
   }
 
-  static async getUserTokens(
-    kv: KVNamespace,
-    email: string
-  ): Promise<UserTokenList> {
+  static async getUserTokens(kv: KVNamespace, email: string): Promise<UserTokenList> {
     const userTokensKey = `user:${email}:tokens`;
     const stored = await kv.get(userTokensKey);
     if (!stored) {
@@ -100,7 +93,7 @@ export class TokenService {
     kv: KVNamespace,
     email: string,
     token: string,
-    createdAt: number
+    createdAt: number,
   ): Promise<void> {
     const userTokensKey = `user:${email}:tokens`;
     const tokens = await this.getUserTokens(kv, email);
@@ -111,7 +104,7 @@ export class TokenService {
   static async removeTokenFromUser(
     kv: KVNamespace,
     email: string,
-    tokenToRemove: string
+    tokenToRemove: string,
   ): Promise<void> {
     const userTokensKey = `user:${email}:tokens`;
     const tokens = await this.getUserTokens(kv, email);
@@ -119,11 +112,7 @@ export class TokenService {
     await kv.put(userTokensKey, JSON.stringify(filtered));
   }
 
-  static async enforceTokenLimit(
-    kv: KVNamespace,
-    email: string,
-    maxTokens: number
-  ): Promise<void> {
+  static async enforceTokenLimit(kv: KVNamespace, email: string, maxTokens: number): Promise<void> {
     const tokens = await this.getUserTokens(kv, email);
 
     if (tokens.length < maxTokens) {
@@ -147,16 +136,13 @@ export class TokenService {
     token: string,
     credentials: AuthCredentials,
     encryptionKey: string,
-    maxTokensPerUser: number = 3
+    maxTokensPerUser: number = 3,
   ): Promise<void> {
     const createdAt = Date.now();
 
     await this.enforceTokenLimit(kv, credentials.username, maxTokensPerUser);
 
-    const { encrypted, iv } = await this.encryptCredentials(
-      credentials,
-      encryptionKey
-    );
+    const { encrypted, iv } = await this.encryptCredentials(credentials, encryptionKey);
 
     const stored: StoredToken = {
       encrypted,
@@ -173,7 +159,7 @@ export class TokenService {
   static async getCredentials(
     kv: KVNamespace,
     token: string,
-    encryptionKey: string
+    encryptionKey: string,
   ): Promise<AuthCredentials | null> {
     const storedData = await kv.get(`token:${token}`);
     if (!storedData) {
@@ -182,11 +168,7 @@ export class TokenService {
 
     try {
       const stored = JSON.parse(storedData) as StoredToken;
-      return await this.decryptCredentials(
-        stored.encrypted,
-        stored.iv,
-        encryptionKey
-      );
+      return await this.decryptCredentials(stored.encrypted, stored.iv, encryptionKey);
     } catch {
       return null;
     }
@@ -194,7 +176,7 @@ export class TokenService {
 
   static async cleanupOrphanTokens(
     kv: KVNamespace,
-    maxAgeDays: number = 365
+    maxAgeDays: number = 365,
   ): Promise<{ cleaned: number; errors: number }> {
     const maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
@@ -202,7 +184,7 @@ export class TokenService {
     let errors = 0;
 
     try {
-      const usersListKey = 'users:list';
+      const usersListKey = "users:list";
       const usersListData = await kv.get(usersListKey);
       const users: string[] = usersListData ? JSON.parse(usersListData) : [];
 
@@ -254,11 +236,8 @@ export class TokenService {
     return { cleaned, errors };
   }
 
-  static async addUserToIndex(
-    kv: KVNamespace,
-    email: string
-  ): Promise<void> {
-    const usersListKey = 'users:list';
+  static async addUserToIndex(kv: KVNamespace, email: string): Promise<void> {
+    const usersListKey = "users:list";
     const usersListData = await kv.get(usersListKey);
     const users: Set<string> = new Set(usersListData ? JSON.parse(usersListData) : []);
 

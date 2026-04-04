@@ -1,13 +1,13 @@
-import { HOMEPAGE_TEMPLATE } from '../templates/homepage.template';
-import { PRIVACY_TEMPLATE } from '../templates/privacy.template';
+import { HOMEPAGE_TEMPLATE } from "../templates/homepage.template";
+import { PRIVACY_TEMPLATE } from "../templates/privacy.template";
 
 export interface TemplateVariables {
   [key: string]: string;
 }
 
 export enum TemplateName {
-  HOMEPAGE = 'homepage',
-  PRIVACY = 'privacy',
+  HOMEPAGE = "homepage",
+  PRIVACY = "privacy",
 }
 
 const TEMPLATES: Record<TemplateName, string> = {
@@ -18,19 +18,19 @@ const TEMPLATES: Record<TemplateName, string> = {
 export class TemplateService {
   static render(template: string, variables: TemplateVariables): string {
     let rendered = template;
-    
+
     for (const [key, value] of Object.entries(variables)) {
       const placeholder = `{{${key}}}`;
-      rendered = rendered.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+      rendered = rendered.replace(
+        new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+        value,
+      );
     }
-    
+
     return rendered;
   }
 
-  static renderTemplate(
-    templateName: TemplateName,
-    variables: TemplateVariables
-  ): string {
+  static renderTemplate(templateName: TemplateName, variables: TemplateVariables): string {
     const template = TEMPLATES[templateName];
     if (!template) {
       throw new Error(`Template ${templateName} not found`);

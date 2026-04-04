@@ -8,9 +8,9 @@
 export async function sha256Hash(input: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /**
@@ -19,10 +19,10 @@ export async function sha256Hash(input: string): Promise<string> {
 export async function sha256HashBase64Url(input: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = new Uint8Array(hashBuffer);
-  
+
   // Convert to base64url
   const base64 = btoa(String.fromCharCode(...hashArray));
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 }

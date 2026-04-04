@@ -40,6 +40,7 @@ Le service supporte deux méthodes d'authentification :
 ### Interface web
 
 Une page d'accueil permet de :
+
 - Générer des tokens d'abonnement pour Google Calendar
 - Obtenir une URL webcal:// pour iOS/macOS
 - Copier facilement les URLs d'abonnement
@@ -66,20 +67,21 @@ curl -u email@example.com:password https://your-worker.workers.dev/
 4. Utilisez l'URL générée dans votre application de calendrier
 
 L'URL générée suit ce format :
+
 ```
 https://your-worker.workers.dev/calendar/{token}?key={encryptionKey}
 ```
 
 ### Réponses HTTP
 
-| Status | Condition |
-|--------|-----------|
-| 200 | Identifiants valides - retourne le fichier iCal |
-| 400 | Paramètres manquants (token ou clé de chiffrement) |
-| 401 | En-tête Authorization manquant ou malformé |
-| 403 | Identifiants Aurion invalides |
-| 404 | Token invalide ou expiré |
-| 502 | Erreur de transport amont lors de la récupération du planning |
+| Status | Condition                                                     |
+| ------ | ------------------------------------------------------------- |
+| 200    | Identifiants valides - retourne le fichier iCal               |
+| 400    | Paramètres manquants (token ou clé de chiffrement)            |
+| 401    | En-tête Authorization manquant ou malformé                    |
+| 403    | Identifiants Aurion invalides                                 |
+| 404    | Token invalide ou expiré                                      |
+| 502    | Erreur de transport amont lors de la récupération du planning |
 
 ## Confidentialité et sécurité
 
@@ -196,6 +198,7 @@ src/
 ### Parsing intelligent
 
 Le service s'appuie sur `aurion-sdk` pour récupérer les événements Aurion et en extraire automatiquement :
+
 - Le titre du cours (avec emojis pour les examens 🎓 et l'auto-apprentissage 🏠)
 - Le lieu
 - Les informations complémentaires (professeur, type de cours)

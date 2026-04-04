@@ -1,7 +1,4 @@
-import {
-  parseAurionPlanningTitle,
-  type AurionPlanningEvent,
-} from 'aurion-sdk';
+import { parseAurionPlanningTitle, type AurionPlanningEvent } from "aurion-sdk";
 
 export interface ICalEvent {
   uid: string;
@@ -129,12 +126,7 @@ export class ICalService {
     const { location, additionalInfo, subject, courseType, professor } =
       parseAurionPlanningTitle(title);
 
-    let summary =
-      subject ||
-      courseType ||
-      location ||
-      additionalInfo ||
-      "Événement sans titre";
+    let summary = subject || courseType || location || additionalInfo || "Événement sans titre";
 
     if (courseType === "EXAM_SURV") {
       summary = `🎓 ${summary}`;
@@ -158,8 +150,7 @@ export class ICalService {
     return {
       summary,
       location: location ? this.normalizeSpaces(location) : undefined,
-      description:
-        descriptionLines.length > 0 ? descriptionLines.join("\n") : undefined,
+      description: descriptionLines.length > 0 ? descriptionLines.join("\n") : undefined,
     };
   }
 
@@ -178,5 +169,4 @@ export class ICalService {
 
     return this.generate(icalEvents);
   }
-
 }
