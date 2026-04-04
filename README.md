@@ -9,6 +9,19 @@ npm install
 npm run dev
 ```
 
+`npm run dev` utilise le runtime Cloudflare distant via `wrangler dev --remote`.
+Utilisez `npm run dev:local` uniquement si vous avez besoin du dashboard Localflare et des bindings locaux.
+
+## Développement local et Aurion
+
+Le flux d'authentification Aurion repose sur des requêtes `POST` avec redirections `302` et cookies de session.
+En pratique, ce flux est plus fiable dans le runtime Cloudflare réel que dans certains émulateurs locaux.
+
+- **Recommandé pour tester Aurion** : `npm run dev`
+- **À réserver au dashboard/bindings locaux** : `npm run dev:local`
+
+Si vous voyez `AURION_TRANSPORT_ERROR` sur `http://127.0.0.1:8787`, testez d'abord avec `npm run dev` avant d'investiguer l'application.
+
 ## Fonctionnalités
 
 ### Authentification multiple
@@ -33,11 +46,9 @@ Une page d'accueil permet de :
 
 ### Cache et performance
 
-- **Cache des événements** : Les données du planning sont mises en cache pendant 1 heure (3600 secondes) pour réduire les appels à Aurion
-- **Gestion des sessions** : Les cookies de session sont stockés et réutilisés pendant 1 heure pour éviter les reconnexions fréquentes
-- **Récupération automatique** : En cas d'expiration de session, reconnexion automatique transparente
-- **Déduplication des requêtes** : Les requêtes simultanées pour les mêmes données sont automatiquement dédupliquées pour éviter les appels redondants à Aurion
-- **Hachage sécurisé** : Les clés de cache utilisent SHA-256 pour garantir l'unicité et prévenir les collisions
+- **Cache SDK** : `aurion-sdk` gère le cache transport et session
+- **Stockage KV** : Cloudflare KV sert de backend de cache pour le SDK
+- **Retry ciblé** : le worker retente sans cache uniquement lors d'une erreur de transport SDK
 
 ## Utilisation
 
@@ -68,7 +79,7 @@ https://your-worker.workers.dev/calendar/{token}?key={encryptionKey}
 | 401 | En-tête Authorization manquant ou malformé |
 | 403 | Identifiants Aurion invalides |
 | 404 | Token invalide ou expiré |
-| 500 | Erreur lors de la récupération du planning |
+| 502 | Erreur de transport amont lors de la récupération du planning |
 
 ## Confidentialité et sécurité
 
@@ -88,18 +99,16 @@ Les identifiants sont **jamais stockés en clair**. Le système utilise :
 
 ### Cache et sessions
 
-- **Cache des événements** : Les données du planning sont mises en cache dans KV avec une clé basée sur un hash SHA-256 des credentials et la période demandée
-- **Déduplication des requêtes** : Un système de verrous empêche les requêtes simultanées pour les mêmes données, réduisant la charge sur Aurion
-- **Sessions Aurion** : Les cookies de session sont stockés dans KV avec une durée de vie de 1 heure
-- **Isolation par utilisateur** : Chaque utilisateur a sa propre clé de cache et de session, garantissant l'isolation des données
+- **Cache géré par le SDK** : `aurion-sdk` gère ses propres clés de cache transport et session
+- **Backend KV** : le worker fournit un store Cloudflare KV au SDK
+- **Sessions Aurion** : les données de session et de transport mises en cache sont stockées dans KV selon les TTL configurés pour le SDK
 
 ### Données stockées
 
 Le service stocke uniquement dans Cloudflare KV :
 
-1. **SESSIONS** : Cookies de session Aurion (durée de vie : 1 heure)
-2. **CACHE** : Événements du planning mis en cache (durée de vie : 1 heure)
-3. **TOKENS** : Tokens chiffrés avec leurs métadonnées (pas d'expiration automatique, suppression manuelle ou lors de la rotation)
+1. **CACHE** : Entrées de cache SDK (transport + session + valeurs sérialisées)
+2. **TOKENS** : Tokens chiffrés avec leurs métadonnées (pas d'expiration automatique, suppression manuelle ou lors de la rotation)
 
 **Important** : Les mots de passe ne sont jamais stockés en clair. Ils sont chiffrés avec AES-GCM avant stockage et nécessitent la clé de chiffrement pour être déchiffrés.
 
@@ -150,12 +159,11 @@ src/
 ├── index.ts                        # Point d'entrée du worker
 ├── services/
 │   ├── auth.service.ts             # Parsing de l'authentification Basic Auth
-│   ├── aurion.service.ts           # Scraper Aurion (login + récupération planning)
-│   ├── ical.service.ts             # Génération iCal avec parsing intelligent
+│   ├── aurion.service.ts           # Intégration aurion-sdk + cache KV
+│   ├── ical.service.ts             # Génération iCal à partir des événements Aurion
 │   ├── template.service.ts         # Gestion et rendu des templates HTML
 │   ├── token.service.ts            # Gestion des tokens et chiffrement
-│   ├── page-parser.service.ts      # Utilitaires de parsing HTML
-│   └── session.service.ts          # Gestion des cookies et sessions HTTP
+│   └── telemetry.service.ts        # Télémétrie backend + frontend
 ├── templates/
 │   └── homepage.template.ts        # Template HTML de la page d'accueil
 ├── types/
@@ -170,13 +178,11 @@ src/
 ### Flux avec Basic Auth
 
 1. L'utilisateur envoie une requête avec Basic Auth (email + mot de passe)
-2. Le worker vérifie le cache pour les événements
-3. Si non trouvé, le worker vérifie la session stockée
-4. Si pas de session valide, connexion à Aurion
-5. Navigation vers la page de planning et récupération des données
-6. Mise en cache des événements et de la session
-7. Conversion des événements en format iCal
-8. Retour du fichier iCal à l'utilisateur
+2. Le worker instancie une session `aurion-sdk`
+3. Le SDK gère son cache via Cloudflare KV
+4. Si nécessaire, le SDK authentifie puis récupère le planning via son API typée
+5. Conversion des événements en format iCal
+6. Retour du fichier iCal à l'utilisateur
 
 ### Flux avec tokens
 
@@ -189,7 +195,7 @@ src/
 
 ### Parsing intelligent
 
-Le service parse automatiquement les événements Aurion pour extraire :
+Le service s'appuie sur `aurion-sdk` pour récupérer les événements Aurion et en extraire automatiquement :
 - Le titre du cours (avec emojis pour les examens 🎓 et l'auto-apprentissage 🏠)
 - Le lieu
 - Les informations complémentaires (professeur, type de cours)

@@ -265,7 +265,7 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
         return null;
       }
       const normalized = String(value).trim().toLowerCase();
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) ? normalized : null;
+      return /^[^s@]+@[^s@]+.[^s@]+$/.test(normalized) ? normalized : null;
     };
 
     const rememberEmail = (email) => {

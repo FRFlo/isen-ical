@@ -1,5 +1,3 @@
-import type { AuthCredentials } from './auth.types';
-
 export interface StoredToken {
   encrypted: string;
   iv: string;

@@ -6,12 +6,21 @@
   "scripts": {
     "dev": "localflare",
     "deploy": "wrangler deploy",
-    "build": "wrangler deploy --dry-run"
+    "build": "wrangler deploy --dry-run",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241218.0",
     "localflare": "^0.4.1",
+    "oxfmt": "^0.43.0",
+    "oxlint": "^1.58.0",
     "typescript": "^5.7.2",
     "wrangler": "^4.59.3"
+  },
+  "dependencies": {
+    "aurion-sdk": "^1.0.1"
   }
 }

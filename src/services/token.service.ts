@@ -1,6 +1,6 @@
 import type { KVNamespace } from '@cloudflare/workers-types';
 import type { AuthCredentials } from '../types/auth.types';
-import type { StoredToken, TokenGenerationResult, UserTokenList } from '../types/token.types';
+import type { StoredToken, UserTokenList } from '../types/token.types';
 
 export class TokenService {
   static generateToken(): string {
@@ -125,7 +125,7 @@ export class TokenService {
     maxTokens: number
   ): Promise<void> {
     const tokens = await this.getUserTokens(kv, email);
-    
+
     if (tokens.length < maxTokens) {
       return;
     }
@@ -150,7 +150,7 @@ export class TokenService {
     maxTokensPerUser: number = 3
   ): Promise<void> {
     const createdAt = Date.now();
-    
+
     await this.enforceTokenLimit(kv, credentials.username, maxTokensPerUser);
 
     const { encrypted, iv } = await this.encryptCredentials(
@@ -187,7 +187,7 @@ export class TokenService {
         stored.iv,
         encryptionKey
       );
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -213,7 +213,7 @@ export class TokenService {
 
           for (const tokenEntry of tokens) {
             const tokenData = await kv.get(`token:${tokenEntry.token}`);
-            
+
             if (!tokenData) {
               cleaned++;
               continue;
@@ -243,11 +243,11 @@ export class TokenService {
               await kv.put(userTokensKey, JSON.stringify(validTokens));
             }
           }
-        } catch (error) {
+        } catch {
           errors++;
         }
       }
-    } catch (error) {
+    } catch {
       errors++;
     }
 
@@ -261,7 +261,7 @@ export class TokenService {
     const usersListKey = 'users:list';
     const usersListData = await kv.get(usersListKey);
     const users: Set<string> = new Set(usersListData ? JSON.parse(usersListData) : []);
-    
+
     if (!users.has(email)) {
       users.add(email);
       await kv.put(usersListKey, JSON.stringify([...users]));

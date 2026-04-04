@@ -1,4 +1,7 @@
-import type { AurionEvent } from "./aurion.service";
+import {
+  parseAurionPlanningTitle,
+  type AurionPlanningEvent,
+} from 'aurion-sdk';
 
 export interface ICalEvent {
   uid: string;
@@ -123,8 +126,8 @@ export class ICalService {
     location?: string;
     description?: string;
   } {
-    const rawParts = title.split("\n").map((p) => p.trim());
-    const [location, additionalInfo, subject, courseType, professor] = rawParts;
+    const { location, additionalInfo, subject, courseType, professor } =
+      parseAurionPlanningTitle(title);
 
     let summary =
       subject ||
@@ -160,20 +163,7 @@ export class ICalService {
     };
   }
 
-  private parseAurionDate(dateValue: string | number): Date {
-    if (typeof dateValue === "number") {
-      return new Date(dateValue);
-    }
-
-    const asNumber = Number(dateValue);
-    if (!isNaN(asNumber) && dateValue.match(/^\d+$/)) {
-      return new Date(asNumber);
-    }
-
-    return new Date(dateValue);
-  }
-
-  fromAurionEvents(aurionEvents: AurionEvent[]): string {
+  fromAurionEvents(aurionEvents: AurionPlanningEvent[]): string {
     const icalEvents: ICalEvent[] = aurionEvents.map((event) => {
       const parsed = this.parseAurionTitle(event.title);
       return {
@@ -181,8 +171,8 @@ export class ICalService {
         summary: parsed.summary,
         location: parsed.location,
         description: parsed.description,
-        dtstart: this.parseAurionDate(event.start),
-        dtend: this.parseAurionDate(event.end),
+        dtstart: event.start,
+        dtend: event.end,
       };
     });
 

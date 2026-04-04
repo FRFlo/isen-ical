@@ -1,5 +1,4 @@
 import type {
-  AuthCredentials,
   AuthResult,
 } from '../types/auth.types';
 
