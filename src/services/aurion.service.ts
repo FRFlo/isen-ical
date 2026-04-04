@@ -197,6 +197,12 @@ export class AurionService {
 						store: this.getSdkCacheStore(),
 						sessionMaxAgeMs: SESSION_CACHE_TTL_MS,
 						transportMaxAgeMs: TRANSPORT_CACHE_TTL_MS,
+						timeRangeApproximation: {
+							planning: {
+								unit: "day",
+								step: 1,
+							},
+						},
 					},
 		});
 
