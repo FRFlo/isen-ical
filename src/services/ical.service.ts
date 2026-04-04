@@ -1,4 +1,9 @@
-import { parseAurionPlanningTitle, type AurionPlanningEvent } from "aurion-sdk";
+import {
+  Address,
+  parseAurionPlanningTitle,
+  parseLocationToAddress,
+  type AurionPlanningEvent,
+} from "aurion-sdk";
 
 export interface ICalEvent {
   uid: string;
@@ -136,6 +141,11 @@ export class ICalService {
 
     summary = this.normalizeSpaces(summary);
 
+    let locationAddress: Address | undefined = undefined;
+    try {
+      locationAddress = location ? parseLocationToAddress(location) : undefined;
+    } catch {}
+
     const descriptionLines: string[] = [];
     if (additionalInfo) {
       descriptionLines.push(additionalInfo, "");
@@ -149,7 +159,14 @@ export class ICalService {
 
     return {
       summary,
-      location: location ? this.normalizeSpaces(location) : undefined,
+      location: [
+        location ? this.normalizeSpaces(location) : undefined,
+        locationAddress
+          ? `${locationAddress.street}, ${locationAddress.postalCode} ${locationAddress.city}`
+          : undefined,
+      ]
+        .filter((v): v is string => !!v)
+        .join(" - "),
       description: descriptionLines.length > 0 ? descriptionLines.join("\n") : undefined,
     };
   }
