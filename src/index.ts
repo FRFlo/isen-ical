@@ -83,11 +83,22 @@ export default {
 		env: Env,
 		_ctx: ExecutionContext,
 	): Promise<void> {
+		try {
+			await AurionService.clearSdkCache(env.CACHE);
+			console.log("Nettoyage quotidien du cache SDK terminé");
+		} catch (error) {
+			console.error("Échec du nettoyage quotidien du cache SDK", error);
+		}
+
 		const maxAgeDays = 365;
-		const result = await TokenService.cleanupOrphanTokens(env.TOKENS, maxAgeDays);
-		console.log(
-			`Nettoyage des tokens orphelins terminé: ${result.cleaned} tokens supprimés, ${result.errors} erreurs`,
-		);
+		try {
+			const result = await TokenService.cleanupOrphanTokens(env.TOKENS, maxAgeDays);
+			console.log(
+				`Nettoyage des tokens orphelins terminé: ${result.cleaned} tokens supprimés, ${result.errors} erreurs`,
+			);
+		} catch (error) {
+			console.error("Échec du nettoyage des tokens orphelins", error);
+		}
 	},
 
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

@@ -131,6 +131,7 @@ export class AurionService {
 	private env: Env;
 	private trackEvent?: (event: string, properties?: Record<string, unknown>) => void;
 	private fetchFn: typeof fetch;
+	private static readonly SDK_CACHE_PREFIX = "aurion-sdk";
 
 	constructor(
 		env: Env,
@@ -157,7 +158,12 @@ export class AurionService {
 	}
 
 	private getSdkCacheStore(): AurionCacheStore {
-		return new CloudflareAurionCacheStore(this.env.CACHE, "aurion-sdk");
+		return new CloudflareAurionCacheStore(this.env.CACHE, AurionService.SDK_CACHE_PREFIX);
+	}
+
+	static async clearSdkCache(kv: KVNamespace): Promise<void> {
+		const store = new CloudflareAurionCacheStore(kv, AurionService.SDK_CACHE_PREFIX);
+		await store.clear();
 	}
 
 	private buildPlanningOptions(): AurionPlanningOptions {
