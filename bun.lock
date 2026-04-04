@@ -240,7 +240,7 @@
 
     "ansi-styles": ["ansi-styles@6.2.3", "", {}, "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg=="],
 
-    "aurion-sdk": ["aurion-sdk@1.0.2", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-ZTJuYYyqlv9I4RkcEK9YerzDHhz9Jdy6Ww+Yg9UHpWom8pxFEdh+/TU4diCCVn8TccUCjV2yg4DlxfirI5W22g=="],
+    "aurion-sdk": ["aurion-sdk@1.0.3", "", { "peerDependencies": { "typescript": "^5" } }, "sha512-U+bVTtvx4id9eYNdl0dv1NUpgi2UiwI3tSB9YIbQf3JP+jLES8JU9fWUZPG9+RkoL2hzydvrMX6tuZB8pW8uxw=="],
 
     "auto-bind": ["auto-bind@5.0.1", "", {}, "sha512-ooviqdwwgfIfNmDwo94wlshcdzfO64XV0Cg6oDsDYBJfITDz1EngD2z7DkbvCWn+XIMsIqW27sEVF6qcpJrRcg=="],
 
