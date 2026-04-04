@@ -1,28 +1,28 @@
 {
-  "name": "isen-ical",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-12-28",
-  "kv_namespaces": [
-    {
-      "binding": "SESSIONS",
-      "id": "982fe9ac3e19435d9d33084f43c73c33",
-    },
-    {
-      "binding": "CACHE",
-      "id": "3a98d646ed2446d99a7077c06d1cdd1a",
-    },
-    {
-      "binding": "TOKENS",
-      "id": "58b81cc461134285839bd289fccdfd59",
-    },
-  ],
-  "placement": {
-    "mode": "smart",
-  },
-  "observability": {
-    "enabled": true,
-  },
-  "triggers": {
-    "crons": ["0 2 * * *"],
-  },
+	"name": "isen-ical",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-12-28",
+	"kv_namespaces": [
+		{
+			"binding": "SESSIONS",
+			"id": "982fe9ac3e19435d9d33084f43c73c33",
+		},
+		{
+			"binding": "CACHE",
+			"id": "3a98d646ed2446d99a7077c06d1cdd1a",
+		},
+		{
+			"binding": "TOKENS",
+			"id": "58b81cc461134285839bd289fccdfd59",
+		},
+	],
+	"placement": {
+		"mode": "smart",
+	},
+	"observability": {
+		"enabled": true,
+	},
+	"triggers": {
+		"crons": ["0 2 * * *"],
+	},
 }

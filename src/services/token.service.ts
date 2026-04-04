@@ -3,247 +3,247 @@ import type { AuthCredentials } from "../types/auth.types";
 import type { StoredToken, UserTokenList } from "../types/token.types";
 
 export class TokenService {
-  static generateToken(): string {
-    return crypto.randomUUID();
-  }
+	static generateToken(): string {
+		return crypto.randomUUID();
+	}
 
-  static generateEncryptionKey(): string {
-    const keyBytes = crypto.getRandomValues(new Uint8Array(32));
-    return this.base64UrlEncode(keyBytes);
-  }
+	static generateEncryptionKey(): string {
+		const keyBytes = crypto.getRandomValues(new Uint8Array(32));
+		return this.base64UrlEncode(keyBytes);
+	}
 
-  private static base64UrlEncode(bytes: Uint8Array): string {
-    const base64 = btoa(String.fromCharCode(...bytes));
-    return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-  }
+	private static base64UrlEncode(bytes: Uint8Array): string {
+		const base64 = btoa(String.fromCharCode(...bytes));
+		return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+	}
 
-  private static base64UrlDecode(base64Url: string): Uint8Array {
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-    const binary = atob(padded);
-    return new Uint8Array([...binary].map((char) => char.charCodeAt(0)));
-  }
+	private static base64UrlDecode(base64Url: string): Uint8Array {
+		const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+		const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+		const binary = atob(padded);
+		return new Uint8Array([...binary].map((char) => char.charCodeAt(0)));
+	}
 
-  static async encryptCredentials(
-    credentials: AuthCredentials,
-    encryptionKey: string,
-  ): Promise<{ encrypted: string; iv: string }> {
-    const keyBytes = this.base64UrlDecode(encryptionKey);
-    const key = await crypto.subtle.importKey(
-      "raw",
-      keyBytes,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["encrypt"],
-    );
+	static async encryptCredentials(
+		credentials: AuthCredentials,
+		encryptionKey: string,
+	): Promise<{ encrypted: string; iv: string }> {
+		const keyBytes = this.base64UrlDecode(encryptionKey);
+		const key = await crypto.subtle.importKey(
+			"raw",
+			keyBytes,
+			{ name: "AES-GCM", length: 256 },
+			false,
+			["encrypt"],
+		);
 
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const data = JSON.stringify(credentials);
-    const encoded = new TextEncoder().encode(data);
+		const iv = crypto.getRandomValues(new Uint8Array(12));
+		const data = JSON.stringify(credentials);
+		const encoded = new TextEncoder().encode(data);
 
-    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
+		const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, encoded);
 
-    return {
-      encrypted: this.base64UrlEncode(new Uint8Array(encrypted)),
-      iv: this.base64UrlEncode(iv),
-    };
-  }
+		return {
+			encrypted: this.base64UrlEncode(new Uint8Array(encrypted)),
+			iv: this.base64UrlEncode(iv),
+		};
+	}
 
-  static async decryptCredentials(
-    encrypted: string,
-    iv: string,
-    encryptionKey: string,
-  ): Promise<AuthCredentials> {
-    const keyBytes = this.base64UrlDecode(encryptionKey);
-    const key = await crypto.subtle.importKey(
-      "raw",
-      keyBytes,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["decrypt"],
-    );
+	static async decryptCredentials(
+		encrypted: string,
+		iv: string,
+		encryptionKey: string,
+	): Promise<AuthCredentials> {
+		const keyBytes = this.base64UrlDecode(encryptionKey);
+		const key = await crypto.subtle.importKey(
+			"raw",
+			keyBytes,
+			{ name: "AES-GCM", length: 256 },
+			false,
+			["decrypt"],
+		);
 
-    const encryptedBytes = this.base64UrlDecode(encrypted);
-    const ivBytes = this.base64UrlDecode(iv);
+		const encryptedBytes = this.base64UrlDecode(encrypted);
+		const ivBytes = this.base64UrlDecode(iv);
 
-    const decrypted = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: ivBytes },
-      key,
-      encryptedBytes,
-    );
+		const decrypted = await crypto.subtle.decrypt(
+			{ name: "AES-GCM", iv: ivBytes },
+			key,
+			encryptedBytes,
+		);
 
-    const decoded = new TextDecoder().decode(decrypted);
-    return JSON.parse(decoded) as AuthCredentials;
-  }
+		const decoded = new TextDecoder().decode(decrypted);
+		return JSON.parse(decoded) as AuthCredentials;
+	}
 
-  static async getUserTokens(kv: KVNamespace, email: string): Promise<UserTokenList> {
-    const userTokensKey = `user:${email}:tokens`;
-    const stored = await kv.get(userTokensKey);
-    if (!stored) {
-      return [];
-    }
-    try {
-      return JSON.parse(stored) as UserTokenList;
-    } catch {
-      return [];
-    }
-  }
+	static async getUserTokens(kv: KVNamespace, email: string): Promise<UserTokenList> {
+		const userTokensKey = `user:${email}:tokens`;
+		const stored = await kv.get(userTokensKey);
+		if (!stored) {
+			return [];
+		}
+		try {
+			return JSON.parse(stored) as UserTokenList;
+		} catch {
+			return [];
+		}
+	}
 
-  static async addTokenToUser(
-    kv: KVNamespace,
-    email: string,
-    token: string,
-    createdAt: number,
-  ): Promise<void> {
-    const userTokensKey = `user:${email}:tokens`;
-    const tokens = await this.getUserTokens(kv, email);
-    tokens.push({ token, createdAt });
-    await kv.put(userTokensKey, JSON.stringify(tokens));
-  }
+	static async addTokenToUser(
+		kv: KVNamespace,
+		email: string,
+		token: string,
+		createdAt: number,
+	): Promise<void> {
+		const userTokensKey = `user:${email}:tokens`;
+		const tokens = await this.getUserTokens(kv, email);
+		tokens.push({ token, createdAt });
+		await kv.put(userTokensKey, JSON.stringify(tokens));
+	}
 
-  static async removeTokenFromUser(
-    kv: KVNamespace,
-    email: string,
-    tokenToRemove: string,
-  ): Promise<void> {
-    const userTokensKey = `user:${email}:tokens`;
-    const tokens = await this.getUserTokens(kv, email);
-    const filtered = tokens.filter((t) => t.token !== tokenToRemove);
-    await kv.put(userTokensKey, JSON.stringify(filtered));
-  }
+	static async removeTokenFromUser(
+		kv: KVNamespace,
+		email: string,
+		tokenToRemove: string,
+	): Promise<void> {
+		const userTokensKey = `user:${email}:tokens`;
+		const tokens = await this.getUserTokens(kv, email);
+		const filtered = tokens.filter((t) => t.token !== tokenToRemove);
+		await kv.put(userTokensKey, JSON.stringify(filtered));
+	}
 
-  static async enforceTokenLimit(kv: KVNamespace, email: string, maxTokens: number): Promise<void> {
-    const tokens = await this.getUserTokens(kv, email);
+	static async enforceTokenLimit(kv: KVNamespace, email: string, maxTokens: number): Promise<void> {
+		const tokens = await this.getUserTokens(kv, email);
 
-    if (tokens.length < maxTokens) {
-      return;
-    }
+		if (tokens.length < maxTokens) {
+			return;
+		}
 
-    const sorted = [...tokens].sort((a, b) => a.createdAt - b.createdAt);
-    const toRemove = sorted.slice(0, tokens.length - maxTokens + 1);
-    const tokensToKeep = sorted.slice(tokens.length - maxTokens + 1);
+		const sorted = [...tokens].sort((a, b) => a.createdAt - b.createdAt);
+		const toRemove = sorted.slice(0, tokens.length - maxTokens + 1);
+		const tokensToKeep = sorted.slice(tokens.length - maxTokens + 1);
 
-    for (const entry of toRemove) {
-      await kv.delete(`token:${entry.token}`);
-    }
+		for (const entry of toRemove) {
+			await kv.delete(`token:${entry.token}`);
+		}
 
-    const userTokensKey = `user:${email}:tokens`;
-    await kv.put(userTokensKey, JSON.stringify(tokensToKeep));
-  }
+		const userTokensKey = `user:${email}:tokens`;
+		await kv.put(userTokensKey, JSON.stringify(tokensToKeep));
+	}
 
-  static async storeToken(
-    kv: KVNamespace,
-    token: string,
-    credentials: AuthCredentials,
-    encryptionKey: string,
-    maxTokensPerUser: number = 3,
-  ): Promise<void> {
-    const createdAt = Date.now();
+	static async storeToken(
+		kv: KVNamespace,
+		token: string,
+		credentials: AuthCredentials,
+		encryptionKey: string,
+		maxTokensPerUser: number = 3,
+	): Promise<void> {
+		const createdAt = Date.now();
 
-    await this.enforceTokenLimit(kv, credentials.username, maxTokensPerUser);
+		await this.enforceTokenLimit(kv, credentials.username, maxTokensPerUser);
 
-    const { encrypted, iv } = await this.encryptCredentials(credentials, encryptionKey);
+		const { encrypted, iv } = await this.encryptCredentials(credentials, encryptionKey);
 
-    const stored: StoredToken = {
-      encrypted,
-      iv,
-      createdAt,
-      email: credentials.username,
-    };
+		const stored: StoredToken = {
+			encrypted,
+			iv,
+			createdAt,
+			email: credentials.username,
+		};
 
-    await kv.put(`token:${token}`, JSON.stringify(stored));
-    await this.addTokenToUser(kv, credentials.username, token, createdAt);
-    await this.addUserToIndex(kv, credentials.username);
-  }
+		await kv.put(`token:${token}`, JSON.stringify(stored));
+		await this.addTokenToUser(kv, credentials.username, token, createdAt);
+		await this.addUserToIndex(kv, credentials.username);
+	}
 
-  static async getCredentials(
-    kv: KVNamespace,
-    token: string,
-    encryptionKey: string,
-  ): Promise<AuthCredentials | null> {
-    const storedData = await kv.get(`token:${token}`);
-    if (!storedData) {
-      return null;
-    }
+	static async getCredentials(
+		kv: KVNamespace,
+		token: string,
+		encryptionKey: string,
+	): Promise<AuthCredentials | null> {
+		const storedData = await kv.get(`token:${token}`);
+		if (!storedData) {
+			return null;
+		}
 
-    try {
-      const stored = JSON.parse(storedData) as StoredToken;
-      return await this.decryptCredentials(stored.encrypted, stored.iv, encryptionKey);
-    } catch {
-      return null;
-    }
-  }
+		try {
+			const stored = JSON.parse(storedData) as StoredToken;
+			return await this.decryptCredentials(stored.encrypted, stored.iv, encryptionKey);
+		} catch {
+			return null;
+		}
+	}
 
-  static async cleanupOrphanTokens(
-    kv: KVNamespace,
-    maxAgeDays: number = 365,
-  ): Promise<{ cleaned: number; errors: number }> {
-    const maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    let cleaned = 0;
-    let errors = 0;
+	static async cleanupOrphanTokens(
+		kv: KVNamespace,
+		maxAgeDays: number = 365,
+	): Promise<{ cleaned: number; errors: number }> {
+		const maxAge = maxAgeDays * 24 * 60 * 60 * 1000;
+		const now = Date.now();
+		let cleaned = 0;
+		let errors = 0;
 
-    try {
-      const usersListKey = "users:list";
-      const usersListData = await kv.get(usersListKey);
-      const users: string[] = usersListData ? JSON.parse(usersListData) : [];
+		try {
+			const usersListKey = "users:list";
+			const usersListData = await kv.get(usersListKey);
+			const users: string[] = usersListData ? JSON.parse(usersListData) : [];
 
-      for (const email of users) {
-        try {
-          const tokens = await this.getUserTokens(kv, email);
-          const validTokens: UserTokenList = [];
+			for (const email of users) {
+				try {
+					const tokens = await this.getUserTokens(kv, email);
+					const validTokens: UserTokenList = [];
 
-          for (const tokenEntry of tokens) {
-            const tokenData = await kv.get(`token:${tokenEntry.token}`);
+					for (const tokenEntry of tokens) {
+						const tokenData = await kv.get(`token:${tokenEntry.token}`);
 
-            if (!tokenData) {
-              cleaned++;
-              continue;
-            }
+						if (!tokenData) {
+							cleaned++;
+							continue;
+						}
 
-            try {
-              const stored = JSON.parse(tokenData) as StoredToken;
-              const age = now - stored.createdAt;
+						try {
+							const stored = JSON.parse(tokenData) as StoredToken;
+							const age = now - stored.createdAt;
 
-              if (age > maxAge) {
-                await kv.delete(`token:${tokenEntry.token}`);
-                cleaned++;
-              } else {
-                validTokens.push(tokenEntry);
-              }
-            } catch {
-              await kv.delete(`token:${tokenEntry.token}`);
-              cleaned++;
-            }
-          }
+							if (age > maxAge) {
+								await kv.delete(`token:${tokenEntry.token}`);
+								cleaned++;
+							} else {
+								validTokens.push(tokenEntry);
+							}
+						} catch {
+							await kv.delete(`token:${tokenEntry.token}`);
+							cleaned++;
+						}
+					}
 
-          if (validTokens.length !== tokens.length) {
-            const userTokensKey = `user:${email}:tokens`;
-            if (validTokens.length === 0) {
-              await kv.delete(userTokensKey);
-            } else {
-              await kv.put(userTokensKey, JSON.stringify(validTokens));
-            }
-          }
-        } catch {
-          errors++;
-        }
-      }
-    } catch {
-      errors++;
-    }
+					if (validTokens.length !== tokens.length) {
+						const userTokensKey = `user:${email}:tokens`;
+						if (validTokens.length === 0) {
+							await kv.delete(userTokensKey);
+						} else {
+							await kv.put(userTokensKey, JSON.stringify(validTokens));
+						}
+					}
+				} catch {
+					errors++;
+				}
+			}
+		} catch {
+			errors++;
+		}
 
-    return { cleaned, errors };
-  }
+		return { cleaned, errors };
+	}
 
-  static async addUserToIndex(kv: KVNamespace, email: string): Promise<void> {
-    const usersListKey = "users:list";
-    const usersListData = await kv.get(usersListKey);
-    const users: Set<string> = new Set(usersListData ? JSON.parse(usersListData) : []);
+	static async addUserToIndex(kv: KVNamespace, email: string): Promise<void> {
+		const usersListKey = "users:list";
+		const usersListData = await kv.get(usersListKey);
+		const users: Set<string> = new Set(usersListData ? JSON.parse(usersListData) : []);
 
-    if (!users.has(email)) {
-      users.add(email);
-      await kv.put(usersListKey, JSON.stringify([...users]));
-    }
-  }
+		if (!users.has(email)) {
+			users.add(email);
+			await kv.put(usersListKey, JSON.stringify([...users]));
+		}
+	}
 }
