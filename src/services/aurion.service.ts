@@ -199,8 +199,8 @@ export class AurionService {
 						transportMaxAgeMs: TRANSPORT_CACHE_TTL_MS,
 						timeRangeApproximation: {
 							planning: {
-								unit: "day",
-								step: 1,
+								unit: "hour",
+								step: 2,
 							},
 						},
 					},
