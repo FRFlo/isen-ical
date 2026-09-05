@@ -3,7 +3,8 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendrier JUNIA - Abonnement</title>
+  <meta http-equiv="refresh" content="5;url=https://naurio.fds.ovh/planning?ical=true">
+  <title>Calendrier JUNIA - Service déprécié</title>
   <style>
     * {
       margin: 0;
@@ -23,142 +24,77 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
       background: white;
       border-radius: 16px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      max-width: 500px;
+      max-width: 520px;
       width: 100%;
       padding: 40px;
       text-align: center;
     }
-    h1 {
-      color: #333;
-      margin-bottom: 10px;
-      font-size: 32px;
-    }
-    .subtitle {
-      color: #666;
-      margin-bottom: 30px;
-      font-size: 16px;
-    }
-    .section-title {
-      color: #333;
-      font-size: 14px;
-      font-weight: 600;
-      margin-bottom: 16px;
+    .deprecation-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fef3c7;
+      color: #b45309;
+      font-weight: 700;
+      font-size: 13px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      margin-bottom: 16px;
     }
-    .section-icon {
-      width: 20px;
-      height: 20px;
+    h1 {
+      color: #1f2937;
+      margin-bottom: 12px;
+      font-size: 26px;
+      font-weight: 700;
     }
-    .divider {
-      display: flex;
-      align-items: center;
-      margin: 28px 0;
-    }
-    .divider-line {
-      flex: 1;
-      height: 1px;
-      background: #ddd;
-    }
-    .divider-text {
-      padding: 0 16px;
-      color: #999;
-      font-size: 14px;
-      font-weight: 500;
-    }
-    .form-group {
-      margin-bottom: 20px;
-      text-align: left;
-    }
-    .form-label {
-      display: block;
-      margin-bottom: 8px;
-      color: #333;
-      font-weight: 500;
-      font-size: 14px;
-    }
-    .form-input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 16px;
-      transition: border-color 0.2s;
-    }
-    .form-input:focus {
-      border-color: #e85c30;
-      outline: none;
-    }
-    .btn {
-      width: 100%;
-      padding: 16px 24px;
-      border: none;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
-      text-align: center;
-      transition: transform 0.2s, box-shadow 0.2s;
-      background: #e85c30;
-      color: white;
-    }
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(232, 92, 48, 0.4);
-    }
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none;
-    }
-    .error {
-      color: #d32f2f;
-      font-size: 14px;
-      margin-top: 8px;
-      text-align: left;
-    }
-    .success {
-      background: #f5f5f5;
-      border-radius: 8px;
-      padding: 20px;
-      margin-top: 20px;
-      text-align: left;
-    }
-    .url-display {
-      background: white;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 12px;
-      word-break: break-all;
-      font-family: monospace;
-      margin: 12px 0;
-      color: #333;
-    }
-    .btn-secondary {
-      background: #4285f4;
-      margin-top: 8px;
-    }
-    .btn-secondary:hover {
-      box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
-    }
-    .instructions {
-      font-size: 13px;
-      color: #666;
-      margin-top: 12px;
+    .deprecation-text {
+      color: #4b5563;
+      font-size: 15px;
       line-height: 1.6;
+      margin-bottom: 24px;
     }
-    .hidden {
-      display: none;
+    .btn-naurio {
+      background: #6366f1;
+      color: white;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 17px;
+      padding: 14px 24px;
+      border-radius: 8px;
+      display: block;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+      transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+    }
+    .btn-naurio:hover {
+      background: #4f46e5;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45);
+    }
+    .redirect-timer {
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: 16px;
+    }
+    .cancel-redirect-btn {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      text-decoration: underline;
+      cursor: pointer;
+      font-size: 13px;
+      margin-top: 8px;
+      display: inline-block;
+      transition: color 0.2s;
+    }
+    .cancel-redirect-btn:hover {
+      color: #4b5563;
     }
     .footer {
-      margin-top: 40px;
+      margin-top: 36px;
       padding-top: 20px;
       border-top: 1px solid #eee;
       text-align: center;
@@ -171,86 +107,57 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
       text-decoration: none;
       font-size: 14px;
       transition: color 0.2s;
-      margin: 0 16px;
+      margin: 0 12px;
       vertical-align: middle;
       line-height: 1;
     }
     .footer-link:hover {
-      color: #333;
+      color: #111;
     }
     .footer-icon {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       display: block;
       flex-shrink: 0;
     }
     .footer-separator {
       display: inline-block;
       width: 1px;
-      height: 20px;
+      height: 18px;
       background: #ddd;
-      margin: 0 8px;
+      margin: 0 4px;
       vertical-align: middle;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>📅 Calendrier JUNIA</h1>
-    <p class="subtitle">Ajoutez votre calendrier à votre application préférée</p>
+    <div class="deprecation-badge">⚠️ Service déprécié</div>
+    <h1>Migration vers Naurio</h1>
+    <p class="deprecation-text">
+      Le service <strong>isen-ical</strong> est désormais déprécié et n'accepte plus de nouveaux abonnements.<br><br>
+      Veuillez utiliser la plateforme <strong>Naurio</strong> pour obtenir et synchroniser votre emploi du temps JUNIA.
+    </p>
 
-    <div class="section-title">
-      <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/apple.svg" alt="Apple" class="section-icon">
-      <span>iOS / macOS</span>
+    <a href="https://naurio.fds.ovh/planning?ical=true" id="naurio-btn" class="btn-naurio">
+      Accéder à Naurio &rarr;
+    </a>
+
+    <div class="redirect-timer" id="redirect-timer-msg">
+      Redirection automatique dans <strong id="countdown">5</strong> secondes...
     </div>
-    <a href="{{webcalUrl}}" id="webcal-btn" class="btn">Ajouter à mon calendrier</a>
-
-    <div class="divider">
-      <div class="divider-line"></div>
-      <div class="divider-text">OU</div>
-      <div class="divider-line"></div>
-    </div>
-
-    <div class="section-title">
-      <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/google.svg" alt="Google" class="section-icon">
-      <span>Google Calendar</span>
-    </div>
-
-    <form id="token-form">
-      <div class="form-group">
-        <label class="form-label" for="email">Email Aurion</label>
-        <input type="email" id="email" class="form-input" required autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="password">Mot de passe</label>
-        <input type="password" id="password" class="form-input" required autocomplete="current-password">
-      </div>
-      <div id="error-message" class="error hidden"></div>
-      <button type="submit" id="generate-btn" class="btn">Générer l'URL d'abonnement</button>
-    </form>
-
-    <div id="success-section" class="success hidden">
-      <strong>URL générée avec succès !</strong>
-      <div class="url-display" id="calendar-url"></div>
-      <a id="google-calendar-link" href="#" target="_blank" class="btn btn-secondary" style="display: none;">Ajouter à Google Calendar</a>
-      <button type="button" id="copy-btn" class="btn btn-secondary">Copier l'URL</button>
-      <div class="instructions">
-        <strong>Instructions pour Google Calendar :</strong><br>
-        Cliquez sur le bouton "Ajouter à Google Calendar" ci-dessus, ou suivez ces étapes manuelles :<br>
-        1. Copiez l'URL ci-dessus<br>
-        2. Ouvrez Google Calendar<br>
-        3. Cliquez sur le "+" à côté de "Autres agendas"<br>
-        4. Sélectionnez "À partir de l'URL"<br>
-        5. Collez l'URL et cliquez sur "Ajouter un agenda"
-      </div>
-    </div>
+    <button type="button" id="cancel-redirect-btn" class="cancel-redirect-btn">
+      Annuler la redirection automatique
+    </button>
 
     <footer class="footer">
+      <a href="https://naurio.fds.ovh/planning?ical=true" class="footer-link">Naurio</a>
+      <span class="footer-separator"></span>
       <a href="/privacy" id="homepage-privacy-link" class="footer-link">Confidentialité</a>
       <span class="footer-separator"></span>
       <a href="https://github.com/FRFlo/isen-ical" id="homepage-github-link" target="_blank" rel="noopener noreferrer" class="footer-link">
         <img src="https://cdn.jsdelivr.net/gh/selfhst/icons@main/svg/github.svg" alt="GitHub" class="footer-icon">
-        <span>Voir sur GitHub</span>
+        <span>GitHub</span>
       </a>
     </footer>
   </div>
@@ -260,42 +167,30 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
     const distinctIdStorageKey = 'isen_ical_distinct_id';
     const userEmailStorageKey = 'isen_ical_user_email';
 
-    const normalizeEmail = (value) => {
-      if (!value) {
+    const getKnownEmail = () => {
+      try {
+        return localStorage.getItem(userEmailStorageKey);
+      } catch {
         return null;
       }
-      const normalized = String(value).trim().toLowerCase();
-      return /^[^s@]+@[^s@]+.[^s@]+$/.test(normalized) ? normalized : null;
     };
 
-    const rememberEmail = (email) => {
-      const normalized = normalizeEmail(email);
-      if (normalized) {
-        localStorage.setItem(userEmailStorageKey, normalized);
+    const getDistinctId = () => {
+      try {
+        const existing = localStorage.getItem(distinctIdStorageKey);
+        if (existing) {
+          return existing;
+        }
+        const created = crypto.randomUUID();
+        localStorage.setItem(distinctIdStorageKey, created);
+        return created;
+      } catch {
+        return 'anonymous';
       }
-      return normalized;
     };
 
-    const getKnownEmail = () => normalizeEmail(localStorage.getItem(userEmailStorageKey));
-
-    const getDistinctId = (emailHint) => {
-      const email = rememberEmail(emailHint) || getKnownEmail();
-      if (email) {
-        const distinctId = 'user:' + email;
-        localStorage.setItem(distinctIdStorageKey, distinctId);
-        return distinctId;
-      }
-      const existing = localStorage.getItem(distinctIdStorageKey);
-      if (existing) {
-        return existing;
-      }
-      const created = crypto.randomUUID();
-      localStorage.setItem(distinctIdStorageKey, created);
-      return created;
-    };
-
-    const trackEvent = (event, properties = {}, emailHint) => {
-      const distinctId = getDistinctId(emailHint);
+    const trackEvent = (event, properties = {}) => {
+      const distinctId = getDistinctId();
       const email = getKnownEmail();
       fetch('/api/track', {
         method: 'POST',
@@ -317,94 +212,45 @@ export const HOMEPAGE_TEMPLATE = `<!DOCTYPE html>
       }).catch(() => {});
     };
 
-    const form = document.getElementById('token-form');
-    const errorMessage = document.getElementById('error-message');
-    const successSection = document.getElementById('success-section');
-    const calendarUrl = document.getElementById('calendar-url');
-    const copyBtn = document.getElementById('copy-btn');
-    const generateBtn = document.getElementById('generate-btn');
-    const googleCalendarLink = document.getElementById('google-calendar-link');
-    const webcalBtn = document.getElementById('webcal-btn');
+    trackEvent('frontend_homepage_viewed');
+
+    const naurioBtn = document.getElementById('naurio-btn');
+    const cancelRedirectBtn = document.getElementById('cancel-redirect-btn');
+    const redirectTimerMsg = document.getElementById('redirect-timer-msg');
+    const countdownEl = document.getElementById('countdown');
     const homepagePrivacyLink = document.getElementById('homepage-privacy-link');
     const homepageGithubLink = document.getElementById('homepage-github-link');
 
-    trackEvent('frontend_homepage_viewed');
+    let countdown = 5;
+    let redirectTimer = setInterval(() => {
+      countdown -= 1;
+      if (countdownEl) {
+        countdownEl.textContent = String(countdown);
+      }
+      if (countdown <= 0) {
+        clearInterval(redirectTimer);
+        window.location.href = 'https://naurio.fds.ovh/planning?ical=true';
+      }
+    }, 1000);
 
-    webcalBtn.addEventListener('click', () => {
-      trackEvent('frontend_webcal_clicked');
+    cancelRedirectBtn.addEventListener('click', () => {
+      clearInterval(redirectTimer);
+      redirectTimerMsg.textContent = 'Redirection automatique annulée.';
+      cancelRedirectBtn.style.display = 'none';
+      trackEvent('frontend_cancel_redirect_clicked');
     });
 
-    googleCalendarLink.addEventListener('click', () => {
-      trackEvent('frontend_google_calendar_clicked');
+    naurioBtn.addEventListener('click', () => {
+      clearInterval(redirectTimer);
+      trackEvent('frontend_naurio_link_clicked');
     });
 
-    homepagePrivacyLink.addEventListener('click', () => {
+    homepagePrivacyLink?.addEventListener('click', () => {
       trackEvent('frontend_homepage_privacy_clicked');
     });
 
-    homepageGithubLink.addEventListener('click', () => {
+    homepageGithubLink?.addEventListener('click', () => {
       trackEvent('frontend_homepage_github_clicked');
-    });
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      trackEvent('frontend_token_form_submitted', {}, email);
-
-      errorMessage.classList.add('hidden');
-      successSection.classList.add('hidden');
-      generateBtn.disabled = true;
-      generateBtn.textContent = 'Génération en cours...';
-
-      try {
-        const response = await fetch('/api/generate-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-request-id': pageRequestId,
-            'x-trace-id': pageRequestId,
-            'x-distinct-id': getDistinctId(email),
-          },
-          body: JSON.stringify({ username: email, password }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Erreur lors de la génération');
-        }
-
-        calendarUrl.textContent = data.url;
-        const encodedUrl = encodeURIComponent(data.url);
-        googleCalendarLink.href = \`https://calendar.google.com/calendar/render?cid=\${encodedUrl}\`;
-        googleCalendarLink.style.display = 'inline-block';
-        successSection.classList.remove('hidden');
-        trackEvent('frontend_token_generation_succeeded', {}, email);
-      } catch (error) {
-        errorMessage.textContent = error.message || 'Une erreur est survenue';
-        errorMessage.classList.remove('hidden');
-        trackEvent('frontend_token_generation_failed', {
-          error: error.message || 'unknown_error',
-        }, email);
-      } finally {
-        generateBtn.disabled = false;
-        generateBtn.textContent = 'Générer l\\'URL d\\'abonnement';
-      }
-    });
-
-    copyBtn.addEventListener('click', () => {
-      const url = calendarUrl.textContent;
-      navigator.clipboard.writeText(url).then(() => {
-        trackEvent('frontend_calendar_url_copied');
-        copyBtn.textContent = 'Copié !';
-        setTimeout(() => {
-          copyBtn.textContent = 'Copier l\\'URL';
-        }, 2000);
-      }).catch(() => {
-        trackEvent('frontend_calendar_url_copy_failed');
-      });
     });
   </script>
 </body>

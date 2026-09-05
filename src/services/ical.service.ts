@@ -10,6 +10,7 @@ export interface ICalEvent {
 	summary: string;
 	description?: string;
 	location?: string;
+	url?: string;
 	dtstart: Date;
 	dtend: Date;
 }
@@ -80,6 +81,10 @@ export class ICalService {
 
 		if (event.location) {
 			lines.push(`LOCATION:${this.escapeText(event.location)}`);
+		}
+
+		if (event.url) {
+			lines.push(`URL:${this.escapeText(event.url)}`);
 		}
 
 		if (event.description) {
@@ -171,7 +176,7 @@ export class ICalService {
 		};
 	}
 
-	fromAurionEvents(aurionEvents: AurionPlanningEvent[]): string {
+	fromAurionEvents(aurionEvents: AurionPlanningEvent[], fetchDate: Date = new Date()): string {
 		const icalEvents: ICalEvent[] = aurionEvents.map((event) => {
 			const parsed = this.parseAurionTitle(event.title);
 			return {
@@ -183,6 +188,22 @@ export class ICalService {
 				dtend: event.end,
 			};
 		});
+
+		const fetchStart = new Date(Math.floor(fetchDate.getTime() / 60000) * 60000);
+		const fetchEnd = new Date(fetchStart.getTime() + 60 * 60 * 1000);
+
+		const migrationNoticeEvent: ICalEvent = {
+			uid: "migration-notice-naurio@isen-ical",
+			summary: "⚠️ Service déprécié - Migrez vers Naurio",
+			location: "https://naurio.fds.ovh/planning?ical=true",
+			url: "https://naurio.fds.ovh/planning?ical=true",
+			description:
+				"Le service isen-ical est désormais déprécié au profit de Naurio.\n\nVeuillez migrer dès maintenant vers le nouveau service pour continuer à synchroniser votre planning :\nhttps://naurio.fds.ovh/planning?ical=true",
+			dtstart: fetchStart,
+			dtend: fetchEnd,
+		};
+
+		icalEvents.unshift(migrationNoticeEvent);
 
 		return this.generate(icalEvents);
 	}

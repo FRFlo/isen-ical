@@ -266,89 +266,19 @@ export default {
 		}
 
 		if (method === "POST" && pathname === "/api/generate-token") {
-			track("token_generation_requested");
-			try {
-				const body = (await request.json()) as { username: string; password: string };
-
-				if (!body.username || !body.password) {
-					track("token_generation_failed", {
-						reason: "missing_credentials",
-					});
-					return withRequestId(
-						new Response(JSON.stringify({ error: "Username and password are required" }), {
-							status: 400,
-							headers: { "Content-Type": "application/json" },
-						}),
-					);
-				}
-
-				const normalizedEmail = normalizeEmail(body.username);
-				const userDistinctId = normalizedEmail
-					? distinctIdFromEmail(normalizedEmail)
-					: clientDistinctId;
-
-				const aurionService = new AurionService(
-					env,
-					(event, properties) => {
-						track(event, properties, userDistinctId);
-					},
-					requestScopedFetch,
-				);
-				await aurionService.getPlanning(body.username, body.password);
-
-				const token = TokenService.generateToken();
-				const encryptionKey = TokenService.generateEncryptionKey();
-
-				const maxTokensPerUser = env.MAX_TOKENS_PER_USER ?? 3;
-				await TokenService.storeToken(
-					env.TOKENS,
-					token,
-					{ username: body.username, password: body.password },
-					encryptionKey,
-					maxTokensPerUser,
-				);
-
-				const calendarUrl = `${url.origin}/calendar/${token}?key=${encodeURIComponent(encryptionKey)}`;
-				track(
-					"token_generation_succeeded",
+			track("token_generation_rejected_deprecated");
+			return withRequestId(
+				new Response(
+					JSON.stringify({
+						error:
+							"Ce service est déprécié. La génération de jeton est désactivée en faveur de Naurio. Veuillez vous rendre sur https://naurio.fds.ovh/planning?ical=true pour obtenir votre calendrier.",
+					}),
 					{
-						route: "api_generate_token",
+						status: 410,
+						headers: { "Content-Type": "application/json" },
 					},
-					userDistinctId,
-				);
-
-				return withRequestId(
-					new Response(JSON.stringify({ token, encryptionKey, url: calendarUrl }), {
-						status: 200,
-						headers: { "Content-Type": "application/json" },
-					}),
-				);
-			} catch (error) {
-				const message = getErrorMessage(error);
-				const status = getAurionErrorStatus(error);
-
-				if (isInvalidAurionCredentials(error)) {
-					track("token_generation_failed", {
-						reason: "invalid_credentials",
-					});
-					return withRequestId(
-						new Response(JSON.stringify({ error: "Invalid credentials" }), {
-							status: 403,
-							headers: { "Content-Type": "application/json" },
-						}),
-					);
-				}
-
-				track("token_generation_failed", {
-					reason: "unexpected_error",
-				});
-				return withRequestId(
-					new Response(JSON.stringify({ error: `Error: ${message}` }), {
-						status,
-						headers: { "Content-Type": "application/json" },
-					}),
-				);
-			}
+				),
+			);
 		}
 
 		if (method === "GET" && pathname.startsWith("/calendar/")) {
